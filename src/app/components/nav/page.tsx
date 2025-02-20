@@ -25,7 +25,7 @@ export default function NavBar() {
          </header>
          <hr className='border-t-2 border-t-[#553C26]' />
          {/* Menu */}
-         <div className='bg-[#F1EEE9] py-4 flex justify-between px-60'>
+         <div className='bg-[#F1EEE9]  flex justify-between px-60'>
             <div className='flex space-x-2 items-center'>
                <Image
                   src={'/images/logoCoChu.png'}
@@ -41,13 +41,13 @@ export default function NavBar() {
                      Trang Chủ
                   </button>
                </Link>
-               <div className='group relative '>
+               <div className='relative group'>
                   <button className='text-lg hover:text-[#FF9900] focus:font-semibold focus:text-[#FF9900] font-mont hover:font-semibold'>
                      Sản Phẩm
                   </button>
-                  <div className='absolute hidden group-hover:block bg-[#F1EEE9] shadow-lg rounded-lg  w-36 font-semibold'>
+                  <div className='absolute hidden group-hover:block bg-[#F1EEE9] shadow-lg rounded-lg  w-36 font-semibold z-50'>
                      <Link
-                        href='/products/candles'
+                        href='/products/candles'   
                         className='block px-4 py-2 text-[#553C26] hover:bg-[#E2DED8] '
                      >
                         Nến Thơm

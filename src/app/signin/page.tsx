@@ -9,10 +9,53 @@ import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 
 export default function SignInPage() {
-   const [showPassword, setShowPassword] = useState(false);
+  
+   const [showPassword, setShowPassword] = useState<boolean>(false);
+   const [email, setEmail] = useState<string>('');
+   const [password, setPassword] = useState<string>('');
+   const [emailError, setEmailError] = useState<string>('');
+   const [passwordError, setPasswordError] = useState<string>('');
 
-   const togglePasswordVisibility = () => {
+   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+   const togglePasswordVisibility = (): void => {
       setShowPassword(!showPassword);
+   };
+
+   const validateEmail = (value: string): void => {
+      setEmail(value);
+      if (!value) {
+         setEmailError('Email không được để trống');
+      } else if (!emailRegex.test(value)) {
+         setEmailError('Email không hợp lệ');
+      } else {
+         setEmailError('');
+      }
+   };
+
+   const validatePassword = (value: string): void => {
+      setPassword(value);
+      if (!value) {
+         setPasswordError('Mật khẩu không được để trống');
+      } else if (!passwordRegex.test(value)) {
+         setPasswordError(
+            'Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt'
+         );
+      } else {
+         setPasswordError('');
+      }
+   };
+
+   const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
+      e.preventDefault();
+      
+      validateEmail(email);
+      validatePassword(password);
+      
+      if (!emailError && !passwordError && email && password) {
+         console.log('Đăng nhập thành công');
+      }
    };
 
    return (
@@ -32,7 +75,7 @@ export default function SignInPage() {
                }}
             >
                <div className='flex justify-end items-center h-full relative right-52'>
-                  <form className='bg-white p-8 rounded-lg shadow-md w-auto'>
+                  <form className='bg-white p-8 rounded-lg shadow-md w-96' onSubmit={handleSubmit}>
                      <h2 className='text-2xl font-bold mb-6 text-center text-[#553C26]'>
                         Đăng Nhập
                      </h2>
@@ -47,9 +90,16 @@ export default function SignInPage() {
                         <input
                            type='email'
                            id='email'
-                           className='w-80 px-3 py-2 border rounded-lg border-[#553C26]'
+                           className={`w-full px-3 py-2 border rounded-lg ${
+                              emailError ? 'border-red-500' : 'border-[#553C26]'
+                           }`}
                            placeholder='Nhập Email hoặc số điện thoại'
+                           value={email}
+                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => validateEmail(e.target.value)}
                         />
+                        {emailError && (
+                           <p className='text-red-500 text-sm mt-1 break-words'>{emailError}</p>
+                        )}
                      </div>
 
                      <div className='mb-2'>
@@ -60,17 +110,21 @@ export default function SignInPage() {
                            Mật Khẩu
                         </label>
 
-                        <div className='flex justify-between items-center'>
+                        <div className='flex justify-between items-center relative'>
                            <input
                               type={showPassword ? 'text' : 'password'}
                               id='password'
-                              className='w-80 px-3 py-2 border rounded-lg border-[#553C26]'
+                              className={`w-full px-3 py-2 border rounded-lg ${
+                                 passwordError ? 'border-red-500' : 'border-[#553C26]'
+                              }`}
                               placeholder='Nhập mật khẩu'
+                              value={password}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => validatePassword(e.target.value)}
                            />
                            <button
                               type='button'
                               onClick={togglePasswordVisibility}
-                              className='relative right-8 '
+                              className='absolute right-3'
                            >
                               {showPassword ? (
                                  <EyeSlashIcon className='size-4' />
@@ -79,22 +133,31 @@ export default function SignInPage() {
                               )}
                            </button>
                         </div>
+                        {passwordError && (
+                           <div className='text-red-500 text-sm mt-1 whitespace-normal break-words max-w-full'>
+                              {passwordError}
+                           </div>
+                        )}
                      </div>
                      <Link href='/forgotPassword'>
                         <p className='flex justify-end mr-4 pb-2 text-[#553C26]'>Quên mật khẩu?</p>
                      </Link>
-                     <Link href='/home'>
-                        <button
-                           type='submit'
-                           className='w-80 bg-[#553C26] text-white py-2 mb-2 rounded-lg hover:bg-[#3e2b1a]'
-                        >
-                           Đăng Nhập
-                        </button>
-                     </Link>
+                     <button
+                        type='submit'
+                        className='w-full bg-[#553C26] text-white py-2 mb-2 rounded-lg hover:bg-[#3e2b1a]'
+                     >
+                        Đăng Nhập
+                     </button>
                      <div className='flex items-center'>
                         <div className='flex-grow border-t border-[#553C26]'></div>
                         <div className='mx-2'>
-                           <Image src='/images/logo.png' alt='Candle Bliss Logo' className='h-10' />
+                           <Image
+                              src='/images/logo.png'
+                              alt='Candle Bliss Logo'
+                              className='h-10'
+                              width={0}
+                              height={0}
+                           />
                         </div>
                         <div className='flex-grow border-t border-[#553C26]'></div>
                      </div>
@@ -102,8 +165,8 @@ export default function SignInPage() {
                         Đăng nhập bằng tài khoản khác
                      </p>
                      <div className='flex justify-center items-center'>
-                        <div className=' h-10 w-40 flex justify-center items-center  my-2 border  border-[#553C26] rounded-lg'>
-                           <Image src='/images/google.png' alt='' />
+                        <div className='h-10 w-40 flex justify-center items-center my-2 border border-[#553C26] rounded-lg'>
+                           <Image src='/images/google.png' alt='' width={50} height={50} />
                         </div>
                      </div>
                      <Link href='/signup'>
