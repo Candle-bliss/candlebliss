@@ -113,173 +113,168 @@ export default function SignUpPage() {
    };
    
    return (
-      
-      <div className='mx-auto my-auto'>
+      <div className='min-h-screen flex flex-col'>
          <NavBar />
          <hr className='border-b-2 border-b-[#F1EEE9]' />
 
-         {/* Form đăng ký */}
+         {/* Background container với responsive height */}
          <div
-            className='h-full w-full bg-fixed'
+            className='flex-grow bg-cover bg-center bg-no-repeat px-4 py-8 md:py-12'
             style={{
                backgroundImage: `url("https://i.imgur.com/i3IlpOo.png")`,
-               backgroundSize: 'cover',
-               backgroundPosition: 'center',
-               height: '800px',
             }}
          >
-            <div className='flex justify-end relative right-52 items-center h-full w-full'>
-               <form className='bg-white p-8 rounded-lg shadow-md w-96' onSubmit={handleSubmit}>
-                  <h2 className='text-2xl font-bold mb-6 text-center text-[#553C26]'>Đăng Ký</h2>
-                  <div className='mb-3'>
-                     <label
-                        htmlFor='phone'
-                        className='block text-[#553C26] mb-2 text-base font-medium'
-                     >
-                        Số điện thoại
-                     </label>
-                     <input
-                        type='text'
-                        id='phone'
-                        className={`w-full px-3 py-2 border rounded-lg ${
-                           phoneError ? 'border-red-500' : 'border-[#553C26]'
-                        }`}
-                        placeholder='Nhập số điện thoại của bạn'
-                        value={phone}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => validatePhone(e.target.value)}
-                     />
-                     {phoneError && (
-                        <p className='text-red-500 text-sm mt-1 break-words'>{phoneError}</p>
-                     )}
-                  </div>
-                  <div className='mb-3'>
-                     <label
-                        htmlFor='email'
-                        className='block text-[#553C26] mb-2 text-base font-medium'
-                     >
-                        Email
-                     </label>
-                     <input
-                        type='email'
-                        id='email'
-                        className={`w-full px-3 py-2 border rounded-lg ${
-                           emailError ? 'border-red-500' : 'border-[#553C26]'
-                        }`}
-                        placeholder='Nhập Email'
-                        value={email}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => validateEmail(e.target.value)}
-                     />
-                     {emailError && (
-                        <p className='text-red-500 text-sm mt-1 break-words'>{emailError}</p>
-                     )}
-                  </div>
-
-                  <div className='mb-3'>
-                     <label
-                        htmlFor='password'
-                        className='block text-[#553C26] mb-2 text-base font-medium'
-                     >
-                        Mật Khẩu
-                     </label>
-
-                     <div className='flex justify-between items-center relative'>
+            {/* Form container với responsive positioning */}
+            <div className='container mx-auto flex justify-center md:justify-end'>
+               <div className='w-full max-w-md md:w-96 md:mr-12 lg:mr-24'>
+                  <form className='bg-white p-6 md:p-8 rounded-lg shadow-md w-full' onSubmit={handleSubmit}>
+                     <h2 className='text-xl md:text-2xl font-bold mb-6 text-center text-[#553C26]'>Đăng Ký</h2>
+                     
+                     {/* Phone Input */}
+                     <div className='mb-4'>
+                        <label htmlFor='phone' className='block text-[#553C26] mb-2 text-sm md:text-base font-medium'>
+                           Số điện thoại
+                        </label>
                         <input
-                           type={showPassword ? 'text' : 'password'}
-                           id='password'
-                           className={`w-full px-3 py-2 border rounded-lg ${
-                              passwordError ? 'border-red-500' : 'border-[#553C26]'
+                           type='text'
+                           id='phone'
+                           className={`w-full px-3 py-2 border rounded-lg text-sm md:text-base ${
+                              phoneError ? 'border-red-500' : 'border-[#553C26]'
                            }`}
-                           placeholder='Nhập mật khẩu'
-                           value={password}
-                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => validatePassword(e.target.value)}
+                           placeholder='Nhập số điện thoại của bạn'
+                           value={phone}
+                           onChange={(e) => validatePhone(e.target.value)}
                         />
-                        <button
-                           type='button'
-                           onClick={togglePasswordVisibility}
-                           className='absolute right-3'
-                        >
-                           {showPassword ? (
-                              <EyeSlashIcon className='size-4' />
-                           ) : (
-                              <EyeIcon className='size-4' />
-                           )}
-                        </button>
+                        {phoneError && <p className='text-red-500 text-xs md:text-sm mt-1'>{phoneError}</p>}
                      </div>
-                     {passwordError && (
-                        <div className='text-red-500 text-sm mt-1 whitespace-normal break-words max-w-full'>
-                           {passwordError}
+
+                     {/* Email Input */}
+                     <div className='mb-4'>
+                        <label htmlFor='email' className='block text-[#553C26] mb-2 text-sm md:text-base font-medium'>
+                           Email
+                        </label>
+                        <input
+                           type='email'
+                           id='email'
+                           className={`w-full px-3 py-2 border rounded-lg text-sm md:text-base ${
+                              emailError ? 'border-red-500' : 'border-[#553C26]'
+                           }`}
+                           placeholder='Nhập Email'
+                           value={email}
+                           onChange={(e) => validateEmail(e.target.value)}
+                        />
+                        {emailError && <p className='text-red-500 text-xs md:text-sm mt-1'>{emailError}</p>}
+                     </div>
+
+                     {/* Password Input */}
+                     <div className='mb-4'>
+                        <label htmlFor='password' className='block text-[#553C26] mb-2 text-sm md:text-base font-medium'>
+                           Mật Khẩu
+                        </label>
+                        <div className='relative'>
+                           <input
+                              type={showPassword ? 'text' : 'password'}
+                              id='password'
+                              className={`w-full px-3 py-2 border rounded-lg text-sm md:text-base ${
+                                 passwordError ? 'border-red-500' : 'border-[#553C26]'
+                              }`}
+                              placeholder='Nhập mật khẩu'
+                              value={password}
+                              onChange={(e) => validatePassword(e.target.value)}
+                           />
+                           <button
+                              type='button'
+                              onClick={togglePasswordVisibility}
+                              className='absolute right-3 top-1/2 transform -translate-y-1/2'
+                           >
+                              {showPassword ? (
+                                 <EyeSlashIcon className='h-4 w-4 md:h-5 md:w-5' />
+                              ) : (
+                                 <EyeIcon className='h-4 w-4 md:h-5 md:w-5' />
+                              )}
+                           </button>
                         </div>
-                     )}
-                  </div>
-                  <div className='mb-4'>
-                     <label
-                        htmlFor='repassword'
-                        className='block text-[#553C26] mb-2 text-base font-medium'
+                        {passwordError && <p className='text-red-500 text-xs md:text-sm mt-1'>{passwordError}</p>}
+                     </div>
+
+                     {/* Confirm Password Input */}
+                     <div className='mb-6'>
+                        <label htmlFor='repassword' className='block text-[#553C26] mb-2 text-sm md:text-base font-medium'>
+                           Xác Nhận Mật Khẩu
+                        </label>
+                        <div className='relative'>
+                           <input
+                              type={showRePassword ? 'text' : 'password'}
+                              id='repassword'
+                              className={`w-full px-3 py-2 border rounded-lg text-sm md:text-base ${
+                                 rePasswordError ? 'border-red-500' : 'border-[#553C26]'
+                              }`}
+                              placeholder='Xác nhận mật khẩu'
+                              value={rePassword}
+                              onChange={(e) => validateRePassword(e.target.value)}
+                           />
+                           <button
+                              type='button'
+                              onClick={toggleRePasswordVisibility}
+                              className='absolute right-3 top-1/2 transform -translate-y-1/2'
+                           >
+                              {showRePassword ? (
+                                 <EyeSlashIcon className='h-4 w-4 md:h-5 md:w-5' />
+                              ) : (
+                                 <EyeIcon className='h-4 w-4 md:h-5 md:w-5' />
+                              )}
+                           </button>
+                        </div>
+                        {rePasswordError && <p className='text-red-500 text-xs md:text-sm mt-1'>{rePasswordError}</p>}
+                     </div>
+
+                     {/* Submit Button */}
+                     <button
+                        type='submit'
+                        className='w-full bg-[#553C26] text-white py-2 rounded-lg hover:bg-[#3e2b1a] text-sm md:text-base'
                      >
-                        Xác Nhận Mật Khẩu
-                     </label>
-                     <div className='flex justify-between items-center relative'>
-                        <input
-                           type={showRePassword ? 'text' : 'password'}
-                           id='repassword'
-                           className={`w-full px-3 py-2 border rounded-lg ${
-                              rePasswordError ? 'border-red-500' : 'border-[#553C26]'
-                           }`}
-                           placeholder='Xác nhận mật khẩu'
-                           value={rePassword}
-                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                              validateRePassword(e.target.value)
-                           }
-                        />
-                        <button
-                           type='button'
-                           onClick={toggleRePasswordVisibility}
-                           className='absolute right-3'
-                        >
-                           {showRePassword ? (
-                              <EyeSlashIcon className='size-4' />
-                           ) : (
-                              <EyeIcon className='size-4' />
-                           )}
-                        </button>
+                        Đăng Ký
+                     </button>
+
+                     {/* Divider with Logo */}
+                     <div className='flex items-center my-4'>
+                        <div className='flex-grow border-t border-[#553C26]'></div>
+                        <div className='mx-2'>
+                           <Image
+                              src='/images/logo.png'
+                              alt='Candle Bliss Logo'
+                              width={40}
+                              height={40}
+                              className='h-8 w-8 md:h-10 md:w-10'
+                           />
+                        </div>
+                        <div className='flex-grow border-t border-[#553C26]'></div>
                      </div>
-                     {rePasswordError && (
-                        <p className='text-red-500 text-sm mt-1 break-words'>{rePasswordError}</p>
-                     )}
-                  </div>
-                  <button
-                     type='submit'
-                     className='w-full bg-[#553C26] text-white py-2 mb-2 rounded-lg hover:bg-[#3e2b1a]'
-                  >
-                     Đăng Ký
-                  </button>
-                  <div className='flex items-center'>
-                     <div className='flex-grow border-t border-[#553C26]'></div>
-                     <div className='mx-2'>
-                        <Image 
-                           src='/images/logo.png' 
-                           alt='Candle Bliss Logo' 
-                           className='h-10' 
-                           width={0} 
-                           height={0}
-                        />
-                     </div>
-                     <div className='flex-grow border-t border-[#553C26]'></div>
-                  </div>
-                  <p className='flex justify-center font-paci text-lg text-[#553C26] mt-2'>
-                     Đăng nhập bằng tài khoản khác
-                  </p>
-                  <div className='flex justify-center items-center'>
-                     <div className='h-10 w-40 flex justify-center items-center mt-2 border border-[#553C26] rounded-lg'>
-                        <Image src='/images/google.png' alt='Google Logo' width={50} height={50}/>
-                     </div>
-                  </div>
-                  <Link href="/signin">
-                     <p className='flex justify-center text-lg text-[#553C26] hover:underline mt-2'>
-                        Đã có tài khoản? Đăng nhập
+
+                     {/* Social Login */}
+                     <p className='text-center font-paci text-sm md:text-lg text-[#553C26] mb-4'>
+                        Đăng nhập bằng tài khoản khác
                      </p>
-                  </Link>
-               </form>
+                     <div className='flex justify-center'>
+                        <div className='h-8 md:h-10 w-32 md:w-40 flex justify-center items-center border border-[#553C26] rounded-lg'>
+                           <Image
+                              src='/images/google.png'
+                              alt='Google Logo'
+                              width={40}
+                              height={20}
+                              className=' md:h-5 md:w-16'
+                           />
+                        </div>
+                     </div>
+
+                     {/* Sign In Link */}
+                     <Link href="/signin">
+                        <p className='text-center text-sm md:text-lg text-[#553C26] hover:underline mt-4'>
+                           Đã có tài khoản? Đăng nhập
+                        </p>
+                     </Link>
+                  </form>
+               </div>
             </div>
          </div>
          <Footer />

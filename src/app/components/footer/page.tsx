@@ -4,93 +4,102 @@ import React from 'react';
 
 export default function Footer() {
    return (
-      <>
-         <footer className='bg-gray-100 py-8'>
-            <div className='container mx-auto flex flex-wrap justify-center gap-24'>
-               <div>
-                  <Image
-                     src={'/images/logoCoChu.png'}
-                     alt='Candle Bliss Logo'
-                     height={62}
-                     width={253}
-                     className='pb-2 pl-10'
-                  />
-                  <div className='pl-14'>
-                     <p className='text-[#542700] font-semibold font-mont'>
-                        Khám phá thế giới nến thơm tinh tế tại Candel Bliss.
+      <footer className='bg-gray-100 py-6 md:py-8'>
+         <div className='container mx-auto px-4'>
+            {/* Grid container with responsive columns */}
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12'>
+               {/* Logo and Description Section */}
+               <div className='text-center md:text-left'>
+                  <div className='flex justify-center md:justify-start mb-4'>
+                     <Image
+                        src='/images/logoCoChu.png'
+                        alt='Candle Bliss Logo'
+                        height={62}
+                        width={253}
+                        className='h-12 md:h-16 w-auto'
+                     />
+                  </div>
+                  <div className='space-y-2'>
+                     <p className='text-[#542700] font-semibold font-mont text-sm md:text-base'>
+                        Khám phá thế giới nến thơm tinh tế tại Candel Bliss. Sẽ mang đến các sản phẩm nến chất lượng cao, 
+                        an toàn, thân thiện môi trường. Giao hàng toàn quốc - Hỗ trợ 24/7.
                      </p>
-                     <p className='text-[#542700] font-semibold font-mont'>
-                        Sẽ mang đến các sản phẩm nến
+                     {/* <p className='text-[#542700] font-semibold font-mont text-sm md:text-base'>
+                        Sẽ mang đến các sản phẩm nến chất lượng cao, 
+                        an toàn, thân thiện môi trường.
                      </p>
-                     <p className='text-[#542700] font-semibold font-mont'>
-                        chất lượng cao, an toàn, thân thiện môi trường,
+                     <p className='text-[#542700] font-semibold font-mont text-sm md:text-base'>
+                        Giúp không gian sống của bạn thêm ấm áp và thư giãn.
                      </p>
-                     <p className='text-[#542700] font-semibold font-mont'>
-                        giúp không gian sống của bạn thêm ấm áp và thư giãn.
-                     </p>
-                     <p className='text-[#542700] font-semibold font-mont'>
+                     <p className='text-[#542700] font-semibold font-mont text-sm md:text-base'>
                         Giao hàng toàn quốc - Hỗ trợ 24/7.
-                     </p>
+                     </p> */}
                   </div>
                </div>
-               <div>
-                  <h4 className='font-semibold text-base font-mont  text-[#542700]'>Danh Mục</h4>
-                  <hr className='w-full border-[#542700]' />
-                  <ul className='space-y-2 mt-2 text-[#542700] text-lg font-medium'>
-                     <li>
-                        <Link href={''}>Trang Chủ</Link>
-                     </li>
-                     <li>
-                        <Link href=''>Sản Phẩm</Link>
-                     </li>
-                     <li>
-                        <Link href=''>Bài Viết</Link>
-                     </li>
-                     <li>
-                        <Link href=''>Liên Hệ</Link>
-                     </li>
+
+               {/* Categories Section */}
+               <div className='text-center md:text-left'>
+                  <h4 className='font-semibold text-base font-mont text-[#542700] mb-2'>
+                     Danh Mục
+                  </h4>
+                  <hr className='w-full border-[#542700] mb-4' />
+                  <ul className='space-y-2 text-[#542700] text-sm md:text-base font-medium'>
+                     {[
+                        { href: '', text: 'Trang Chủ' },
+                        { href: '', text: 'Sản Phẩm' },
+                        { href: '', text: 'Bài Viết' },
+                        { href: '', text: 'Liên Hệ' }
+                     ].map((item, index) => (
+                        <li key={index}>
+                           <Link href={item.href} className='hover:text-[#FF9900] transition-colors'>
+                              {item.text}
+                           </Link>
+                        </li>
+                     ))}
                   </ul>
                </div>
 
-               <div className='w-48'>
-                  <h4 className='font-semibold text-base font-mont  text-[#542700]'>Chính Sách</h4>
-                  <hr className='w-full border-[#542700]' />
-                  <ul className='space-y-2 mt-2 text-[#542700] text-lg font-medium'>
-                     <li>
-                        <Link href=''>Điều khoản sử dụng</Link>
-                     </li>
-                     <li>
-                        <Link href='/'> Chính sách bảo mật</Link>
-                     </li>
-                     <li>
-                        <Link href='/'>Hình thức thanh toán</Link>
-                     </li>
-                     <li>
-                        <Link href='/'>Hình thức đổi trả</Link>
-                     </li>
-                     <li>
-                        <Link href='/'>Chính sách vận chuyển</Link>
-                     </li>
+               {/* Policies Section */}
+               <div className='text-center md:text-left'>
+                  <h4 className='font-semibold text-base font-mont text-[#542700] mb-2'>
+                     Chính Sách
+                  </h4>
+                  <hr className='w-full border-[#542700] mb-4' />
+                  <ul className='space-y-2 text-[#542700] text-sm md:text-base font-medium'>
+                     {[
+                        { href: '/', text: 'Điều khoản sử dụng' },
+                        { href: '/', text: 'Chính sách bảo mật' },
+                        { href: '/', text: 'Hình thức thanh toán' },
+                        { href: '/', text: 'Hình thức đổi trả' },
+                        { href: '/', text: 'Chính sách vận chuyển' }
+                     ].map((item, index) => (
+                        <li key={index}>
+                           <Link href={item.href} className='hover:text-[#FF9900] transition-colors'>
+                              {item.text}
+                           </Link>
+                        </li>
+                     ))}
                   </ul>
                </div>
-               <div className='w-72'>
-                  <h4 className='font-semibold text-base font-mont  text-[#542700]'>
+
+               {/* Contact Information Section */}
+               <div className='text-center md:text-left'>
+                  <h4 className='font-semibold text-base font-mont text-[#542700] mb-2'>
                      Thông Tin Liên Hệ
                   </h4>
-                  <hr className='w-full border-[#542700]' />
-                  <p className='space-y-2 mt-2 text-[#542700] text-lg font-medium'>
-                     Email: candlebliss@gmail.com
-                  </p>
-                  <p className='space-y-2 mt-2 text-[#542700] text-lg font-medium'>
-                     Số điện thoại: 03338052
-                  </p>
-                  <p className='space-y-2 mt-2 text-[#542700] text-lg font-medium'>
-                     Địa chỉ: 12 Nguyễn Văn Bảo, Phường 04, Quận Gò Vấp , Thành phố Hồ Chí
-                     Minh , Việt Nam
-                  </p>
+                  <hr className='w-full border-[#542700] mb-4' />
+                  <div className='space-y-3 text-[#542700] text-sm md:text-base font-medium'>
+                     <p>Email: candlebliss@gmail.com</p>
+                     <p>Số điện thoại: 03338052</p>
+                     <p className='break-words'>
+                        Địa chỉ: 12 Nguyễn Văn Bảo, Phường 04, 
+                        Quận Gò Vấp, Thành phố Hồ Chí Minh, 
+                        Việt Nam
+                     </p>
+                  </div>
                </div>
             </div>
-         </footer>
-      </>
+         </div>
+      </footer>
    );
 }

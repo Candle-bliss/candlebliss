@@ -139,8 +139,8 @@ export default function SignInPage() {
                            </div>
                         )}
                      </div>
-                     <Link href='/forgotPassword'>
-                        <p className='flex justify-end mr-4 pb-2 text-[#553C26]'>Quên mật khẩu?</p>
+                     <Link href='/forgotpassword'>
+                        <p className='flex justify-end mr-4 pb-2 text-[#553C26] hover:underline'>Quên mật khẩu?</p>
                      </Link>
                      <button
                         type='submit'
