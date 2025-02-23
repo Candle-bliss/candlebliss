@@ -8,24 +8,119 @@ import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 
 export default function SignUpPage() {
-   const [showPassword, setShowPassword] = useState(false);
-   const [showRePassword, setShowRePassword] = useState(false);
+   const [showPassword, setShowPassword] = useState<boolean>(false);
+   const [showRePassword, setShowRePassword] = useState<boolean>(false);
+   
+   // Các state để lưu giá trị input
+   const [phone, setPhone] = useState<string>('');
+   const [email, setEmail] = useState<string>('');
+   const [password, setPassword] = useState<string>('');
+   const [rePassword, setRePassword] = useState<string>('');
+   
+   // Các state để lưu thông báo lỗi
+   const [phoneError, setPhoneError] = useState<string>('');
+   const [emailError, setEmailError] = useState<string>('');
+   const [passwordError, setPasswordError] = useState<string>('');
+   const [rePasswordError, setRePasswordError] = useState<string>('');
+   
+   // Biểu thức chính quy
+   const phoneRegex = /^(0[1-9]|84[1-9])\d{8}$/; // Số điện thoại Việt Nam (10 số, bắt đầu bằng 0 hoặc 84)
+   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
-   const togglePasswordVisibility = () => {
+   const togglePasswordVisibility = (): void => {
       setShowPassword(!showPassword);
    };
 
-   const toggleRePasswordVisibility = () => {
+   const toggleRePasswordVisibility = (): void => {
       setShowRePassword(!showRePassword);
    };
+   
+   // Hàm kiểm tra số điện thoại
+   const validatePhone = (value: string): void => {
+      setPhone(value);
+      if (!value) {
+         setPhoneError('Số điện thoại không được để trống');
+      } else if (!phoneRegex.test(value)) {
+         setPhoneError('Số điện thoại không hợp lệ. Vui lòng nhập đúng định dạng số điện thoại Việt Nam');
+      } else {
+         setPhoneError('');
+      }
+   };
+   
+   // Hàm kiểm tra email
+   const validateEmail = (value: string): void => {
+      setEmail(value);
+      if (!value) {
+         setEmailError('Email không được để trống');
+      } else if (!emailRegex.test(value)) {
+         setEmailError('Email không hợp lệ');
+      } else {
+         setEmailError('');
+      }
+   };
+   
+   // Hàm kiểm tra mật khẩu
+   const validatePassword = (value: string): void => {
+      setPassword(value);
+      if (!value) {
+         setPasswordError('Mật khẩu không được để trống');
+      } else if (!passwordRegex.test(value)) {
+         setPasswordError(
+            'Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt'
+         );
+      } else {
+         setPasswordError('');
+      }
+      
+      // Kiểm tra lại mật khẩu xác nhận nếu đã nhập
+      if (rePassword) {
+         validateRePassword(rePassword, value);
+      }
+   };
+   
+   // Hàm kiểm tra xác nhận mật khẩu
+   const validateRePassword = (value: string, pass?: string): void => {
+      setRePassword(value);
+      const currentPassword = pass || password;
+      
+      if (!value) {
+         setRePasswordError('Vui lòng xác nhận mật khẩu');
+      } else if (value !== currentPassword) {
+         setRePasswordError('Mật khẩu xác nhận không khớp');
+      } else {
+         setRePasswordError('');
+      }
+   };
+   
+   // Xử lý khi submit form
+   const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
+      e.preventDefault();
+      
+      // Kiểm tra lại tất cả trường dữ liệu
+      validatePhone(phone);
+      validateEmail(email);
+      validatePassword(password);
+      validateRePassword(rePassword);
+      
+      // Chỉ tiếp tục nếu không có lỗi
+      if (!phoneError && !emailError && !passwordError && !rePasswordError && 
+          phone && email && password && rePassword) {
+         console.log('Đăng ký thành công!');
+         // Có thể chuyển hướng đến trang OTP tại đây
+         window.location.href = '/otp';
+      }
+   };
+   
    return (
-      <div className='mx-auto'>
+      
+      <div className='mx-auto my-auto'>
          <NavBar />
          <hr className='border-b-2 border-b-[#F1EEE9]' />
 
          {/* Form đăng ký */}
          <div
-            className='h-full w-full bg-scroll'
+            className='h-full w-full bg-fixed'
             style={{
                backgroundImage: `url("https://i.imgur.com/i3IlpOo.png")`,
                backgroundSize: 'cover',
@@ -33,10 +128,10 @@ export default function SignUpPage() {
                height: '800px',
             }}
          >
-            <div className='flex justify-end relative right-52  items-center h-full  w-full'>
-               <form className='bg-white p-8 rounded-lg shadow-md w-auto'>
+            <div className='flex justify-end relative right-52 items-center h-full w-full'>
+               <form className='bg-white p-8 rounded-lg shadow-md w-96' onSubmit={handleSubmit}>
                   <h2 className='text-2xl font-bold mb-6 text-center text-[#553C26]'>Đăng Ký</h2>
-                  <div className='mb-2'>
+                  <div className='mb-3'>
                      <label
                         htmlFor='phone'
                         className='block text-[#553C26] mb-2 text-base font-medium'
@@ -46,11 +141,18 @@ export default function SignUpPage() {
                      <input
                         type='text'
                         id='phone'
-                        className='w-80 px-3 py-2 border rounded-lg hover:border-[#553C26]'
+                        className={`w-full px-3 py-2 border rounded-lg ${
+                           phoneError ? 'border-red-500' : 'border-[#553C26]'
+                        }`}
                         placeholder='Nhập số điện thoại của bạn'
+                        value={phone}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => validatePhone(e.target.value)}
                      />
+                     {phoneError && (
+                        <p className='text-red-500 text-sm mt-1 break-words'>{phoneError}</p>
+                     )}
                   </div>
-                  <div className='mb-4'>
+                  <div className='mb-3'>
                      <label
                         htmlFor='email'
                         className='block text-[#553C26] mb-2 text-base font-medium'
@@ -60,12 +162,19 @@ export default function SignUpPage() {
                      <input
                         type='email'
                         id='email'
-                        className='w-80 px-3 py-2 border rounded-lg hover:border-[#553C26]'
+                        className={`w-full px-3 py-2 border rounded-lg ${
+                           emailError ? 'border-red-500' : 'border-[#553C26]'
+                        }`}
                         placeholder='Nhập Email'
+                        value={email}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => validateEmail(e.target.value)}
                      />
+                     {emailError && (
+                        <p className='text-red-500 text-sm mt-1 break-words'>{emailError}</p>
+                     )}
                   </div>
 
-                  <div className='mb-4'>
+                  <div className='mb-3'>
                      <label
                         htmlFor='password'
                         className='block text-[#553C26] mb-2 text-base font-medium'
@@ -73,17 +182,21 @@ export default function SignUpPage() {
                         Mật Khẩu
                      </label>
 
-                     <div className='flex justify-between items-center'>
+                     <div className='flex justify-between items-center relative'>
                         <input
                            type={showPassword ? 'text' : 'password'}
                            id='password'
-                           className='w-80 px-3 py-2 border rounded-lg hover:border-[#553C26]'
+                           className={`w-full px-3 py-2 border rounded-lg ${
+                              passwordError ? 'border-red-500' : 'border-[#553C26]'
+                           }`}
                            placeholder='Nhập mật khẩu'
+                           value={password}
+                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => validatePassword(e.target.value)}
                         />
                         <button
                            type='button'
                            onClick={togglePasswordVisibility}
-                           className='relative right-8 '
+                           className='absolute right-3'
                         >
                            {showPassword ? (
                               <EyeSlashIcon className='size-4' />
@@ -92,25 +205,36 @@ export default function SignUpPage() {
                            )}
                         </button>
                      </div>
+                     {passwordError && (
+                        <div className='text-red-500 text-sm mt-1 whitespace-normal break-words max-w-full'>
+                           {passwordError}
+                        </div>
+                     )}
                   </div>
-                  <div className='mb-6'>
+                  <div className='mb-4'>
                      <label
                         htmlFor='repassword'
                         className='block text-[#553C26] mb-2 text-base font-medium'
                      >
                         Xác Nhận Mật Khẩu
                      </label>
-                     <div className='flex justify-between items-center '>
+                     <div className='flex justify-between items-center relative'>
                         <input
                            type={showRePassword ? 'text' : 'password'}
                            id='repassword'
-                           className='w-80 px-3 py-2 border rounded-lg hover:border-[#553C26]'
+                           className={`w-full px-3 py-2 border rounded-lg ${
+                              rePasswordError ? 'border-red-500' : 'border-[#553C26]'
+                           }`}
                            placeholder='Xác nhận mật khẩu'
+                           value={rePassword}
+                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                              validateRePassword(e.target.value)
+                           }
                         />
                         <button
                            type='button'
                            onClick={toggleRePasswordVisibility}
-                           className='relative right-8'
+                           className='absolute right-3'
                         >
                            {showRePassword ? (
                               <EyeSlashIcon className='size-4' />
@@ -119,30 +243,42 @@ export default function SignUpPage() {
                            )}
                         </button>
                      </div>
+                     {rePasswordError && (
+                        <p className='text-red-500 text-sm mt-1 break-words'>{rePasswordError}</p>
+                     )}
                   </div>
-                  <Link href='/otp'>
-                     <button
-                        type='submit'
-                        className='w-80 bg-[#553C26] text-white py-2 mb-2 rounded-lg hover:bg-[#3e2b1a]'
-                     >
-                        Đăng Ký
-                     </button>
-                  </Link>
+                  <button
+                     type='submit'
+                     className='w-full bg-[#553C26] text-white py-2 mb-2 rounded-lg hover:bg-[#3e2b1a]'
+                  >
+                     Đăng Ký
+                  </button>
                   <div className='flex items-center'>
                      <div className='flex-grow border-t border-[#553C26]'></div>
                      <div className='mx-2'>
-                        <Image src='/images/logo.png' alt='Candle Bliss Logo' className='h-10' />
+                        <Image 
+                           src='/images/logo.png' 
+                           alt='Candle Bliss Logo' 
+                           className='h-10' 
+                           width={0} 
+                           height={0}
+                        />
                      </div>
                      <div className='flex-grow border-t border-[#553C26]'></div>
                   </div>
-                  <p className='flex justify-center font-paci text-lg text-[#553C26]'>
+                  <p className='flex justify-center font-paci text-lg text-[#553C26] mt-2'>
                      Đăng nhập bằng tài khoản khác
                   </p>
                   <div className='flex justify-center items-center'>
-                     <div className=' h-10 w-40 flex justify-center items-center  mt-4 border  border-[#553C26] rounded-lg'>
-                        <Image src='/images/google.png' alt='' />
+                     <div className='h-10 w-40 flex justify-center items-center mt-2 border border-[#553C26] rounded-lg'>
+                        <Image src='/images/google.png' alt='Google Logo' width={50} height={50}/>
                      </div>
                   </div>
+                  <Link href="/signin">
+                     <p className='flex justify-center text-lg text-[#553C26] hover:underline mt-2'>
+                        Đã có tài khoản? Đăng nhập
+                     </p>
+                  </Link>
                </form>
             </div>
          </div>
