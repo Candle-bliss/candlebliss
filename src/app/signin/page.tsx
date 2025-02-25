@@ -165,9 +165,9 @@ export default function SignInPage() {
                         Đăng nhập bằng tài khoản khác
                      </p>
                      <div className='flex justify-center items-center'>
-                        <div className='h-10 w-40 flex justify-center items-center my-2 border border-[#553C26] rounded-lg'>
+                        <button className='h-10 w-40 flex justify-center items-center my-2 border border-[#553C26] rounded-lg'>
                            <Image src='/images/google.png' alt='' width={50} height={50} />
-                        </div>
+                        </button>
                      </div>
                      <Link href='/signup'>
                         <p className='flex justify-center text-lg text-[#553C26] hover:underline'>

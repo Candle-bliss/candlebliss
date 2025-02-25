@@ -75,7 +75,10 @@ export default function HomePage() {
                      </h1>
                      <p className='text-white font-mont text-base lg:text-lg'>
                         Mỗi ngọn nến trong bộ sưu tập của chúng tôi là một kiệt tác của nghệ thuật
-                        và tính xác thực...
+                        và tính xác thực. Chúng tôi tự hào tạo ra những ngọn nến không chỉ đẹp về
+                        mặt thẩm mỹ mà còn có ý thức bảo vệ môi trường. Cam kết sử dụng vật liệu tự
+                        nhiên, bền vững của chúng tôi đảm bảo rằng mỗi ngọn nến bạn thắp đều là sự
+                        đón nhận nhẹ nhàng của bản chất thiên nhiên.
                      </p>
                   </div>
                   <div className='grid grid-cols-1 md:grid-cols-3 gap-6 w-full lg:w-1/2'>
@@ -187,11 +190,16 @@ export default function HomePage() {
                   }}
                >
                   <div className='max-w-4xl mx-auto text-center text-white'>
-                     <h2 className='text-2xl lg:text-3xl font-mont mb-8'>
-                        Liên hệ ngay với Candle Bliss để biết thêm chi tiết
+                     <h2 className='text-2xl lg:text-3xl font-mont '>
+                        Liên hệ ngay với Candle Bliss
                      </h2>
+                     <h2 className='text-2xl lg:text-3xl font-mont mb-8'>để biết thêm chi tiết</h2>
                      <p className='font-mont mb-8 px-4 lg:px-0'>
-                        Khám phá sự quyến rũ của nến thơm tại Candle Bliss...
+                        Khám phá sự quyến rũ của nến thơm tại Candle Bliss – nơi những mùi hương mê
+                        hoặc và thiết kế tinh tế hòa quyện, mang đến sự ấm áp và sang trọng cho mọi
+                        không gian. Hãy để mỗi ngọn nến trở thành một phần trong câu chuyện của bạn.
+                        Liên hệ ngay hôm nay để cùng chúng tôi lan tỏa ánh sáng và hương thơm đặc
+                        biệt!.
                      </p>
                      <button className='h-10 w-40 bg-[#DDA15E] text-white hover:bg-orange-600'>
                         Liên Hệ !
@@ -199,7 +207,6 @@ export default function HomePage() {
                   </div>
                </div>
             </div>
-
             <Footer />
          </div>
       </>

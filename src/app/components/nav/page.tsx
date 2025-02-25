@@ -69,9 +69,11 @@ export default function NavBar() {
 
                   {/* Products Dropdown */}
                   <div className='relative group'>
-                     <button className='text-base lg:text-lg hover:text-[#FF9900] focus:font-semibold focus:text-[#FF9900] font-mont hover:font-semibold'>
+                     <Link href='/product'>
+                     <button className='text-base lg:text-lg hover:text-[#FF9900] focus:font-semibold focus:text-[#FF9900] font-mont hover:font-semibold' >
                         Sản Phẩm
                      </button>
+                     </Link>
                      <div className='absolute hidden group-hover:block bg-[#F1EEE9] shadow-lg rounded-lg w-36 font-semibold z-50'>
                         {[
                            { href: '/products/candles', text: 'Nến Thơm' },

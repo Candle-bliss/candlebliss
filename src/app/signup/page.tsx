@@ -256,15 +256,15 @@ export default function SignUpPage() {
                         Đăng nhập bằng tài khoản khác
                      </p>
                      <div className='flex justify-center'>
-                        <div className='h-8 md:h-10 w-32 md:w-40 flex justify-center items-center border border-[#553C26] rounded-lg'>
+                        <button className='h-8 md:h-10 w-32 md:w-40 flex justify-center items-center border border-[#553C26] rounded-lg'>
                            <Image
                               src='/images/google.png'
                               alt='Google Logo'
-                              width={40}
-                              height={20}
+                              width={50}
+                              height={50}
                               className=' md:h-5 md:w-16'
                            />
-                        </div>
+                        </button>
                      </div>
 
                      {/* Sign In Link */}
