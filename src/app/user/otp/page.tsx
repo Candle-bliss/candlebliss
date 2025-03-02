@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
-import NavBar from '../components/nav/page';
-import Footer from '../components/footer/page';
+import NavBar from '@/app/components/user/nav/page';
+import Footer from '@/app/components/user/footer/page';
 import Image from 'next/image';
 
 export default function OTPPage() {

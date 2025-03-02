@@ -3,8 +3,8 @@ import React from 'react';
 import { useState } from 'react';
 import Link from 'next/link';
 
-import NavBar from '../components/nav/page';
-import Footer from '../components/footer/page';
+import NavBar from '@/app/components/user/nav/page';
+import Footer from '@/app/components/user/footer/page';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 
@@ -139,7 +139,7 @@ export default function SignInPage() {
                            </div>
                         )}
                      </div>
-                     <Link href='/forgotpassword'>
+                     <Link href='/user/forgotpassword'>
                         <p className='flex justify-end mr-4 pb-2 text-[#553C26] hover:underline'>Quên mật khẩu?</p>
                      </Link>
                      <button
@@ -169,7 +169,7 @@ export default function SignInPage() {
                            <Image src='/images/google.png' alt='' width={50} height={50} />
                         </button>
                      </div>
-                     <Link href='/signup'>
+                     <Link href='/user/signup'>
                         <p className='flex justify-center text-lg text-[#553C26] hover:underline'>
                            Chưa có tài khoản? Đăng ký
                         </p>

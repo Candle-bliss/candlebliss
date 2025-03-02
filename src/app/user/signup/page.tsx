@@ -2,8 +2,8 @@
 import React from 'react';
 import { useState } from 'react';
 import Link from 'next/link';
-import NavBar from '../components/nav/page';
-import Footer from '../components/footer/page';
+import NavBar from '@/app/components/user/nav/page';
+import Footer from '@/app/components/user/footer/page';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 
@@ -268,7 +268,7 @@ export default function SignUpPage() {
                      </div>
 
                      {/* Sign In Link */}
-                     <Link href="/signin">
+                     <Link href="/user/signin">
                         <p className='text-center text-sm md:text-lg text-[#553C26] hover:underline mt-4'>
                            Đã có tài khoản? Đăng nhập
                         </p>

@@ -1,8 +1,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { EyeIcon } from 'lucide-react';
-import NavBar from '../components/nav/page';
-import Footer from '../components/footer/page';
+import NavBar from '@/app/components/user/nav/page';
+import Footer from '@/app/components/user/footer/page';
 
 export default function ForgotPasswordPage() {
    // Existing form state

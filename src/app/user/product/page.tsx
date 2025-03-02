@@ -2,9 +2,10 @@
 
 import React, { useState } from 'react';
 import { Star, StarHalf, Eye, Menu, X, ShoppingCart } from 'lucide-react';
-import NavBar from '../components/nav/page';
-import Footer from '../components/footer/page';
-import MenuSidebar from '../components/menusidebar/page';
+import NavBar from '@/app/components/user/nav/page';
+import MenuSidebar from '@/app/components/user/menusidebar/page';
+import Footer from '@/app/components/user/footer/page';
+
 
 interface ProductCardProps {
    title: string;

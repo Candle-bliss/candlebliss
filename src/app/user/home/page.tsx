@@ -1,12 +1,14 @@
 'use client';
 import React from 'react';
-import NavBar from '../components/nav/page';
-import Carousel from '../components/carousel/page';
+
 import { ChevronRightIcon } from '@heroicons/react/24/outline';
-import TrendingCarousel from '../components/trendingcarousel/page';
-import Footer from '../components/footer/page';
-import AccessoriesCarousel from '../components/accessoriescarousel/page';
+
 import Image from 'next/image';
+import Carousel from '@/app/components/user/carousel/page';
+import AccessoriesCarousel from '@/app/components/user/accessoriescarousel/page';
+import TrendingCarousel from '@/app/components/user/trendingcarousel/page';
+import NavBar from '@/app/components/user/nav/page';
+import Footer from '@/app/components/user/footer/page';
 
 export default function HomePage() {
    return (
