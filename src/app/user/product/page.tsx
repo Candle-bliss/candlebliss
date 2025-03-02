@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Star, StarHalf, Eye, Menu, X, ShoppingCart } from 'lucide-react';
+import Image from 'next/image';
 import NavBar from '@/app/components/user/nav/page';
 import MenuSidebar from '@/app/components/user/menusidebar/page';
 import Footer from '@/app/components/user/footer/page';
@@ -43,9 +44,11 @@ const ProductCard = ({ title, price, rating, imageUrl, onViewDetail, onAddToCart
    return (
       <div className="rounded-lg bg-white p-3 shadow-lg hover:shadow-md transition-shadow">
          <div className="relative aspect-square overflow-hidden rounded-lg group">
-            <img
+            <Image
                src={imageUrl}
                alt={title}
+               height={400}
+               width={400}
                className="h-full w-full object-cover transition-all duration-300 group-hover:blur-sm"
             />
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
