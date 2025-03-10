@@ -1,17 +1,18 @@
-'use client'
+'use client';
 
 import React from 'react';
-
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
-
-
 import { Calendar, Search, Bell } from 'lucide-react';
 
 export default function Header() {
    const [showDropdown, setShowDropdown] = useState(false);
    const [currentDateTime, setCurrentDateTime] = useState(new Date());
+   const [isMounted, setIsMounted] = useState(false);
 
    useEffect(() => {
+      setIsMounted(true);
+
       const timer = setInterval(() => {
          setCurrentDateTime(new Date());
       }, 1000);
@@ -53,10 +54,11 @@ export default function Header() {
 
       return `${hours}:${minutes}:${seconds}`;
    };
+
    return (
       <>
          {/* Header */}
-         <header className='bg-gradient-to-r from-amber-100 to-amber-700 shadow'>
+         <header className='bg-gradient-to-r from-[#F1EEE9] to-[#442C08] shadow'>
             <div className='flex justify-between items-center p-4'>
                {/* Today section with calendar icon */}
                <div className='flex items-center bg-amber-50 rounded-lg px-4 py-2'>
@@ -83,7 +85,7 @@ export default function Header() {
 
                   {/* Notifications */}
                   <div className='mr-4 relative'>
-                     <Bell size={20} className='text-gray-600' />
+                     <Bell size={20} className='text-white' />
                      <span className='absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center'>
                         3
                      </span>
@@ -95,10 +97,19 @@ export default function Header() {
                         className='flex items-center bg-white rounded-lg p-1 shadow-sm'
                         onClick={() => setShowDropdown(!showDropdown)}
                      >
-                        
+                        <Image
+                              src="/images/logo.png"
+                              alt="Avatar"
+                              width={40}
+                              height={40}
+                              className="rounded-full"
+                           />
                         <div className='ml-2 mr-1'>
+                           
                            <div className='text-sm font-medium text-gray-700'>Thảo Vy</div>
-                           <div className='text-xs text-gray-500'>{formatTime()}</div>
+                           <div className='text-xs text-gray-500'>
+                              {isMounted ? formatTime() : ''}
+                           </div>
                         </div>
                      </button>
 
@@ -116,12 +127,6 @@ export default function Header() {
                                  className='block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100'
                               >
                                  Settings
-                              </a>
-                              <a
-                                 href='#'
-                                 className='block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100'
-                              >
-                                 Logout
                               </a>
                            </div>
                         </div>

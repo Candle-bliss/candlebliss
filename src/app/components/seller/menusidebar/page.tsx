@@ -24,10 +24,17 @@ export default function MenuSideBar() {
       setShowProductSubmenu(!showProductSubmenu);
    };
 
+   const handleLogout = () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('userData');
+      window.location.href = '/seller/signin';
+   };
+
+
    return (
-      <div className='min-h-screen bg-gray-50 flex'>
+      <div className='min-h-screen  flex'>
          {/* Sidebar */}
-         <div className='w-64 bg-white shadow-md h-screen flex flex-col'>
+         <div className='w-64 bg-[#F1EEE9] shadow-md h-screen flex flex-col'>
             <div className='p-4 border-b'>
                <div className='flex items-center'>
                   <Image
@@ -40,10 +47,10 @@ export default function MenuSideBar() {
                </div>
             </div>
             <nav className='mt-4 flex-grow overflow-y-auto'>
-               <div className='px-4 py-2'>
+               <div className='px-4 py-2 '>
                   <Link
                      href='/seller/dashboard'
-                     className='flex items-center p-2 bg-amber-100 text-amber-800 rounded'
+                     className='flex items-center p-2 text-[#442C08] rounded border border-[#442C08] hover:bg-gray-100'
                   >
                      <Home size={18} className='mr-2' />
                      <span>Danh Mục</span>
@@ -52,7 +59,7 @@ export default function MenuSideBar() {
                <div className='px-4 py-2'>
                   <button
                      onClick={toggleProductSubmenu}
-                     className='flex items-center justify-between w-full p-2 text-gray-600 hover:bg-gray-100 rounded'
+                     className='flex items-center justify-between w-full p-2 text-gray-600 hover:bg-gray-100 rounded '
                   >
                      <div className='flex items-center'>
                         <Package size={18} className='mr-2' />
@@ -64,7 +71,7 @@ export default function MenuSideBar() {
                   {showProductSubmenu && (
                      <div className='ml-6 mt-2 border-l-2 border-gray-200 pl-2'>
                         <Link
-                           href='/products/all'
+                           href='/seller/products'
                            className='flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded'
                         >
                            <span className='text-sm'>Tất cả sản phẩm</span>
@@ -76,7 +83,7 @@ export default function MenuSideBar() {
                            <span className='text-sm'>Tạo set quà</span>
                         </Link>
                         <Link
-                           href='/products/promotions'
+                           href='/seller/vouchers'
                            className='flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded'
                         >
                            <span className='text-sm'>Khuyến Mãi</span>
@@ -139,7 +146,7 @@ export default function MenuSideBar() {
             <div className='p-4 border-t'>
                <button className='flex items-center p-2 text-gray-600 w-full hover:bg-gray-100 rounded'>
                   <LogOut size={18} className='mr-2' />
-                  <span>Đăng Xuất</span>
+                  <span onClick={handleLogout}>Đăng Xuất</span>
                </button>
             </div>
          </div>
