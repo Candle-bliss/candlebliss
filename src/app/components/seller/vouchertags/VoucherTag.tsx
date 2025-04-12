@@ -1,21 +1,32 @@
 'use client';
+
 import React from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 interface VoucherTagProps {
+   id: string;
    code: string;
    discount: string;
    expiryDate: string;
    status: string;
 }
 
-const VoucherTag: React.FC<VoucherTagProps> = ({ code, discount, expiryDate, status }) => {
+const VoucherTag: React.FC<VoucherTagProps> = ({ id, code, discount, expiryDate, status }) => {
+   const router = useRouter();
+
+   const handleVoucherClick = () => {
+      router.push(`/seller/vouchers/${id || code}`);
+   };
+
    return (
-      <div className='relative border border-gray-200 rounded-lg shadow-sm overflow-hidden bg-white hover:shadow-md transition-shadow'>
+      <div 
+         className='relative border border-gray-200 rounded-lg shadow-sm overflow-hidden bg-white hover:shadow-md transition-all cursor-pointer hover:border-amber-300'
+         onClick={handleVoucherClick}
+      >
          <div className='flex'>
             {/* Left side with curved edge and candle icon */}
             <div className='relative w-16 flex items-center justify-center py-4 border-r border-dashed border-gray-200'>
-               {/* Candle icon */}
                <Image src='/images/logo.png' width={50} height={50} alt='Candle Bliss Logo' className='w-max h-max' />
             </div>
 
@@ -26,7 +37,7 @@ const VoucherTag: React.FC<VoucherTagProps> = ({ code, discount, expiryDate, sta
                </div>
 
                <div className='font-medium mb-1.5'>
-                  Giảm <span className='text-red-500 font-bold'>{discount}</span> cho khách hàng mới
+                  Giảm <span className='text-red-500 font-bold'>{discount}</span> 
                </div>
 
                <div className='text-sm text-gray-600 mb-1.5'>HSD: {expiryDate}</div>
@@ -35,7 +46,7 @@ const VoucherTag: React.FC<VoucherTagProps> = ({ code, discount, expiryDate, sta
                   <span className='mr-2 text-gray-600'>Tình Trạng:</span>
                   <span
                      className={`font-medium ${
-                        status === 'Còn Hàng' ? 'text-green-600' : 'text-red-500'
+                        status === 'Còn hiệu lực' ? 'text-green-600' : 'text-red-500'
                      }`}
                   >
                      {status}

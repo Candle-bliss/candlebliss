@@ -1,30 +1,59 @@
 'use client';
-import React from 'react';
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import NavBar from '@/app/components/user/nav/page';
 import Footer from '@/app/components/user/footer/page';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
+import Toast from '@/app/components/ui/toast/Toast';
+import AuthService from '@/app/utils/authService';
 
 export default function SignUpPage() {
+   const router = useRouter();
    const [showPassword, setShowPassword] = useState<boolean>(false);
    const [showRePassword, setShowRePassword] = useState<boolean>(false);
-   
-   // Các state để lưu giá trị input
+
+   // State lưu giá trị input
    const [phone, setPhone] = useState<string>('');
    const [email, setEmail] = useState<string>('');
    const [password, setPassword] = useState<string>('');
    const [rePassword, setRePassword] = useState<string>('');
-   
-   // Các state để lưu thông báo lỗi
+   const [firstName, setFirstName] = useState<string>('');
+   const [lastName, setLastName] = useState<string>('');
+
+   // State lưu thông báo lỗi
    const [phoneError, setPhoneError] = useState<string>('');
    const [emailError, setEmailError] = useState<string>('');
    const [passwordError, setPasswordError] = useState<string>('');
    const [rePasswordError, setRePasswordError] = useState<string>('');
-   
-   // Biểu thức chính quy
-   const phoneRegex = /^(0[1-9]|84[1-9])\d{8}$/; // Số điện thoại Việt Nam (10 số, bắt đầu bằng 0 hoặc 84)
+   const [firstNameError, setFirstNameError] = useState<string>('');
+   const [lastNameError, setLastNameError] = useState<string>('');
+   const [apiError, setApiError] = useState<string>(''); // Lỗi từ server
+   const [isLoading, setIsLoading] = useState<boolean>(false); // Loading trạng thái
+
+   // State cho Toast notification
+   const [toast, setToast] = useState<{
+      show: boolean;
+      message: string;
+      type: 'success' | 'error' | 'info';
+      position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+   }>({
+      show: false,
+      message: '',
+      type: 'info',
+      position: 'top-right',
+   });
+
+   // Kiểm tra nếu người dùng đã đăng nhập thì chuyển hướng
+   useEffect(() => {
+      if (AuthService.isAuthenticated()) {
+         router.push('/user/home');
+      }
+   }, [router]);
+
+   // Biểu thức regex
+   const phoneRegex = /^(0[1-9]|84[1-9])\d{8}$/;
    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
@@ -35,20 +64,18 @@ export default function SignUpPage() {
    const toggleRePasswordVisibility = (): void => {
       setShowRePassword(!showRePassword);
    };
-   
-   // Hàm kiểm tra số điện thoại
+
    const validatePhone = (value: string): void => {
       setPhone(value);
       if (!value) {
          setPhoneError('Số điện thoại không được để trống');
       } else if (!phoneRegex.test(value)) {
-         setPhoneError('Số điện thoại không hợp lệ. Vui lòng nhập đúng định dạng số điện thoại Việt Nam');
+         setPhoneError('Số điện thoại không hợp lệ');
       } else {
          setPhoneError('');
       }
    };
-   
-   // Hàm kiểm tra email
+
    const validateEmail = (value: string): void => {
       setEmail(value);
       if (!value) {
@@ -59,31 +86,26 @@ export default function SignUpPage() {
          setEmailError('');
       }
    };
-   
-   // Hàm kiểm tra mật khẩu
+
    const validatePassword = (value: string): void => {
       setPassword(value);
       if (!value) {
          setPasswordError('Mật khẩu không được để trống');
       } else if (!passwordRegex.test(value)) {
          setPasswordError(
-            'Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt'
+            'Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt',
          );
       } else {
          setPasswordError('');
       }
-      
-      // Kiểm tra lại mật khẩu xác nhận nếu đã nhập
       if (rePassword) {
          validateRePassword(rePassword, value);
       }
    };
-   
-   // Hàm kiểm tra xác nhận mật khẩu
+
    const validateRePassword = (value: string, pass?: string): void => {
       setRePassword(value);
       const currentPassword = pass || password;
-      
       if (!value) {
          setRePasswordError('Vui lòng xác nhận mật khẩu');
       } else if (value !== currentPassword) {
@@ -92,47 +114,319 @@ export default function SignUpPage() {
          setRePasswordError('');
       }
    };
-   
-   // Xử lý khi submit form
-   const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
-      e.preventDefault();
-      
-      // Kiểm tra lại tất cả trường dữ liệu
-      validatePhone(phone);
-      validateEmail(email);
-      validatePassword(password);
-      validateRePassword(rePassword);
-      
-      // Chỉ tiếp tục nếu không có lỗi
-      if (!phoneError && !emailError && !passwordError && !rePasswordError && 
-          phone && email && password && rePassword) {
-         console.log('Đăng ký thành công!');
-         // Có thể chuyển hướng đến trang OTP tại đây
-         window.location.href = '/otp';
+
+   const validateFirstName = (value: string): void => {
+      setFirstName(value);
+      if (!value.trim()) {
+         setFirstNameError('Tên không được để trống');
+      } else {
+         setFirstNameError('');
       }
    };
-   
+
+   const validateLastName = (value: string): void => {
+      setLastName(value);
+      if (!value.trim()) {
+         setLastNameError('Họ không được để trống');
+      } else {
+         setLastNameError('');
+      }
+   };
+
+   // Thêm hàm validate form
+   const validateForm = () => {
+      let isValid = true;
+
+      // Validate họ tên
+      if (!firstName.trim()) {
+         setFirstNameError('Tên không được để trống');
+         isValid = false;
+      }
+
+      if (!lastName.trim()) {
+         setLastNameError('Họ không được để trống');
+         isValid = false;
+      }
+
+      // Validate số điện thoại
+      if (!phone) {
+         setPhoneError('Số điện thoại không được để trống');
+         isValid = false;
+      } else if (!phoneRegex.test(phone)) {
+         setPhoneError('Số điện thoại không hợp lệ');
+         isValid = false;
+      }
+
+      // Validate email
+      if (!email) {
+         setEmailError('Email không được để trống');
+         isValid = false;
+      } else if (!emailRegex.test(email)) {
+         setEmailError('Email không hợp lệ');
+         isValid = false;
+      }
+
+      // Validate mật khẩu
+      if (!password) {
+         setPasswordError('Mật khẩu không được để trống');
+         isValid = false;
+      } else if (!passwordRegex.test(password)) {
+         setPasswordError(
+            'Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt',
+         );
+         isValid = false;
+      }
+
+      // Validate nhập lại mật khẩu
+      if (!rePassword) {
+         setRePasswordError('Vui lòng xác nhận mật khẩu');
+         isValid = false;
+      } else if (rePassword !== password) {
+         setRePasswordError('Mật khẩu xác nhận không khớp');
+         isValid = false;
+      }
+
+      return isValid;
+   };
+
+   // Xử lý đăng nhập với Google
+   const handleGoogleSignup = () => {
+      try {
+         window.location.href = 'http://68.183.226.198:3000/api/v1/auth/google';
+      } catch (error) {
+         console.error('Google signup error:', error);
+         showToastMessage('Đăng ký bằng Google thất bại', 'error');
+      }
+   };
+
+   // Hàm tiện ích hiển thị Toast
+   const showToastMessage = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+      setToast({
+         show: true,
+         message,
+         type,
+         position: 'top-right',
+      });
+
+      // Tự động ẩn toast sau 5 giây
+      setTimeout(() => {
+         setToast((prev) => ({ ...prev, show: false }));
+      }, 5000);
+   };
+
+   // Xử lý khi submit form
+   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+
+      if (!validateForm()) {
+         return;
+      }
+
+      setIsLoading(true);
+      setApiError('');
+
+      try {
+         // Chuẩn bị dữ liệu đăng ký
+         const userData = {
+            email,
+            password,
+            firstName,
+            lastName,
+            phone,
+         };
+
+         const response = await fetch('http://68.183.226.198:3000/api/v1/auth/email/register', {
+            method: 'POST',
+            headers: {
+               'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(userData),
+         });
+
+         let data;
+         const contentType = response.headers.get('content-type');
+
+         // Kiểm tra xem response có phải là JSON không trước khi parse
+         if (contentType && contentType.includes('application/json')) {
+            try {
+               data = await response.json();
+            } catch (jsonError) {
+               console.error('JSON parsing error:', jsonError);
+               showToastMessage('Lỗi dữ liệu từ server', 'error');
+               throw new Error('Lỗi dữ liệu từ server');
+            }
+         } else {
+            // Nếu không phải JSON, đọc dưới dạng text
+            const textResponse = await response.text();
+            console.error('Non-JSON response:', textResponse);
+            data = { message: 'Lỗi định dạng phản hồi từ server' };
+         }
+
+         if (!response.ok) {
+            // Xử lý các mã lỗi cụ thể
+            if (response.status === 409) {
+               setEmailError('Email này đã được sử dụng');
+               showToastMessage('Email này đã được sử dụng', 'error');
+            } else if (response.status === 400) {
+               setApiError(data?.message || 'Dữ liệu không hợp lệ');
+               showToastMessage(data?.message || 'Dữ liệu không hợp lệ', 'error');
+            } else {
+               throw new Error(data?.message || 'Đăng ký không thành công');
+            }
+            return;
+         }
+
+         // Đăng ký thành công - sử dụng AuthService nếu API trả về token
+         if (data && data.token && data.refreshToken) {
+            // Lưu token bằng AuthService
+            AuthService.setTokens(data.token, data.refreshToken);
+
+            // Lưu thông tin người dùng
+            if (data.user) {
+               AuthService.saveUserInfo({
+                  id: data.user.id,
+                  email: email,
+                  firstName: firstName,
+                  lastName: lastName,
+                  phone: phone,
+                  ...data.user, // bổ sung thêm thông tin khác nếu API trả về
+               });
+            } else {
+               // Nếu API không trả về thông tin user, tự tạo từ form
+               AuthService.saveUserInfo({
+                  email: email,
+                  firstName: firstName,
+                  lastName: lastName,
+                  phone: phone,
+                  id: '',
+               });
+            }
+
+            showToastMessage('Đăng ký thành công!', 'success');
+
+            // Chuyển hướng sau khi đăng ký thành công
+            setTimeout(() => {
+               router.push('/user/home');
+            }, 1500);
+         } else {
+            // // Trường hợp cần xác thực OTP
+            // showToastMessage('Đăng ký thành công! Vui lòng xác thực OTP để tiếp tục.', 'success');
+            // // Lưu thông tin đăng ký cho quá trình xác thực OTP
+            // sessionStorage.setItem('registerEmail', email);
+            // sessionStorage.setItem('registerPhone', phone);
+            // // Chờ 1.5 giây để hiển thị thông báo thành công trước khi chuyển hướng
+            // setTimeout(() => {
+            //    router.push('/user/otp');
+            // }, 1500);
+         }
+
+         // Reset form sau khi đăng ký thành công
+         setEmail('');
+         setPassword('');
+         setRePassword('');
+         setFirstName('');
+         setLastName('');
+         setPhone('');
+      } catch (error: unknown) {
+         console.error('Registration error:', error);
+         const errorMessage =
+            error instanceof Error ? error.message : 'Có lỗi xảy ra, vui lòng thử lại sau.';
+
+         showToastMessage(errorMessage, 'error');
+         setApiError(errorMessage);
+      } finally {
+         setIsLoading(false);
+      }
+   };
+
    return (
       <div className='min-h-screen flex flex-col'>
+         <div className='fixed top-4 right-4 z-50'>
+            <Toast
+               show={toast.show}
+               message={toast.message}
+               type={toast.type}
+               onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+            />
+         </div>
+
          <NavBar />
          <hr className='border-b-2 border-b-[#F1EEE9]' />
 
-         {/* Background container với responsive height */}
          <div
-            className='flex-grow bg-cover bg-center bg-no-repeat px-4 py-8 md:py-12'
-            style={{
-               backgroundImage: `url("https://i.imgur.com/i3IlpOo.png")`,
-            }}
+            className='flex-grow bg-cover bg-center px-4 py-8 md:py-12'
+            style={{ backgroundImage: `url("https://i.imgur.com/i3IlpOo.png")` }}
          >
-            {/* Form container với responsive positioning */}
             <div className='container mx-auto flex justify-center md:justify-end'>
                <div className='w-full max-w-md md:w-96 md:mr-12 lg:mr-24'>
-                  <form className='bg-white p-6 md:p-8 rounded-lg shadow-md w-full' onSubmit={handleSubmit}>
-                     <h2 className='text-xl md:text-2xl font-bold mb-6 text-center text-[#553C26]'>Đăng Ký</h2>
-                     
+                  <form
+                     className='bg-white p-6 md:p-8 rounded-lg shadow-md w-full'
+                     onSubmit={handleSubmit}
+                  >
+                     <h2 className='text-xl md:text-2xl font-bold mb-6 text-center text-[#553C26]'>
+                        Đăng Ký
+                     </h2>
+
+                     {/* Hiển thị lỗi API */}
+                     {apiError && <p className='text-red-500 text-center mb-4'>{apiError}</p>}
+
+                     {/* Họ và Tên */}
+                     <div className='flex space-x-4 mb-4'>
+                        <div className='w-1/2'>
+                           <label
+                              htmlFor='lastName'
+                              className='block text-[#553C26] mb-2 text-sm md:text-base font-medium'
+                           >
+                              Họ
+                           </label>
+                           <input
+                              type='text'
+                              id='lastName'
+                              className={`w-full px-3 py-2 border rounded-lg text-sm md:text-base ${
+                                 lastNameError ? 'border-red-500' : 'border-[#553C26]'
+                              }`}
+                              placeholder='Nhập họ'
+                              value={lastName}
+                              onChange={(e) => validateLastName(e.target.value)}
+                           />
+                           {lastNameError && (
+                              <p className='text-red-500 text-xs md:text-sm mt-1'>
+                                 {lastNameError}
+                              </p>
+                           )}
+                        </div>
+
+                        <div className='w-1/2'>
+                           <label
+                              htmlFor='firstName'
+                              className='block text-[#553C26] mb-2 text-sm md:text-base font-medium'
+                           >
+                              Tên
+                           </label>
+                           <input
+                              type='text'
+                              id='firstName'
+                              className={`w-full px-3 py-2 border rounded-lg text-sm md:text-base ${
+                                 firstNameError ? 'border-red-500' : 'border-[#553C26]'
+                              }`}
+                              placeholder='Nhập tên'
+                              value={firstName}
+                              onChange={(e) => validateFirstName(e.target.value)}
+                           />
+                           {firstNameError && (
+                              <p className='text-red-500 text-xs md:text-sm mt-1'>
+                                 {firstNameError}
+                              </p>
+                           )}
+                        </div>
+                     </div>
+
                      {/* Phone Input */}
                      <div className='mb-4'>
-                        <label htmlFor='phone' className='block text-[#553C26] mb-2 text-sm md:text-base font-medium'>
+                        <label
+                           htmlFor='phone'
+                           className='block text-[#553C26] mb-2 text-sm md:text-base font-medium'
+                        >
                            Số điện thoại
                         </label>
                         <input
@@ -145,12 +439,17 @@ export default function SignUpPage() {
                            value={phone}
                            onChange={(e) => validatePhone(e.target.value)}
                         />
-                        {phoneError && <p className='text-red-500 text-xs md:text-sm mt-1'>{phoneError}</p>}
+                        {phoneError && (
+                           <p className='text-red-500 text-xs md:text-sm mt-1'>{phoneError}</p>
+                        )}
                      </div>
 
                      {/* Email Input */}
                      <div className='mb-4'>
-                        <label htmlFor='email' className='block text-[#553C26] mb-2 text-sm md:text-base font-medium'>
+                        <label
+                           htmlFor='email'
+                           className='block text-[#553C26] mb-2 text-sm md:text-base font-medium'
+                        >
                            Email
                         </label>
                         <input
@@ -163,12 +462,17 @@ export default function SignUpPage() {
                            value={email}
                            onChange={(e) => validateEmail(e.target.value)}
                         />
-                        {emailError && <p className='text-red-500 text-xs md:text-sm mt-1'>{emailError}</p>}
+                        {emailError && (
+                           <p className='text-red-500 text-xs md:text-sm mt-1'>{emailError}</p>
+                        )}
                      </div>
 
                      {/* Password Input */}
                      <div className='mb-4'>
-                        <label htmlFor='password' className='block text-[#553C26] mb-2 text-sm md:text-base font-medium'>
+                        <label
+                           htmlFor='password'
+                           className='block text-[#553C26] mb-2 text-sm md:text-base font-medium'
+                        >
                            Mật Khẩu
                         </label>
                         <div className='relative'>
@@ -194,12 +498,17 @@ export default function SignUpPage() {
                               )}
                            </button>
                         </div>
-                        {passwordError && <p className='text-red-500 text-xs md:text-sm mt-1'>{passwordError}</p>}
+                        {passwordError && (
+                           <p className='text-red-500 text-xs md:text-sm mt-1'>{passwordError}</p>
+                        )}
                      </div>
 
                      {/* Confirm Password Input */}
                      <div className='mb-6'>
-                        <label htmlFor='repassword' className='block text-[#553C26] mb-2 text-sm md:text-base font-medium'>
+                        <label
+                           htmlFor='repassword'
+                           className='block text-[#553C26] mb-2 text-sm md:text-base font-medium'
+                        >
                            Xác Nhận Mật Khẩu
                         </label>
                         <div className='relative'>
@@ -225,15 +534,44 @@ export default function SignUpPage() {
                               )}
                            </button>
                         </div>
-                        {rePasswordError && <p className='text-red-500 text-xs md:text-sm mt-1'>{rePasswordError}</p>}
+                        {rePasswordError && (
+                           <p className='text-red-500 text-xs md:text-sm mt-1'>{rePasswordError}</p>
+                        )}
                      </div>
 
-                     {/* Submit Button */}
+                     {/* Submit Button - thêm hiệu ứng loading */}
                      <button
                         type='submit'
-                        className='w-full bg-[#553C26] text-white py-2 rounded-lg hover:bg-[#3e2b1a] text-sm md:text-base'
+                        className='w-full bg-[#553C26] text-white py-2 rounded-lg hover:bg-[#3e2b1a] transition-colors duration-300 text-sm md:text-base flex justify-center items-center'
+                        disabled={isLoading}
                      >
-                        Đăng Ký
+                        {isLoading ? (
+                           <>
+                              <svg
+                                 className='animate-spin -ml-1 mr-3 h-5 w-5 text-white'
+                                 xmlns='http://www.w3.org/2000/svg'
+                                 fill='none'
+                                 viewBox='0 0 24 24'
+                              >
+                                 <circle
+                                    className='opacity-25'
+                                    cx='12'
+                                    cy='12'
+                                    r='10'
+                                    stroke='currentColor'
+                                    strokeWidth='4'
+                                 ></circle>
+                                 <path
+                                    className='opacity-75'
+                                    fill='currentColor'
+                                    d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                                 ></path>
+                              </svg>
+                              Đang xử lý...
+                           </>
+                        ) : (
+                           'Đăng Ký'
+                        )}
                      </button>
 
                      {/* Divider with Logo */}
@@ -253,22 +591,26 @@ export default function SignUpPage() {
 
                      {/* Social Login */}
                      <p className='text-center font-paci text-sm md:text-lg text-[#553C26] mb-4'>
-                        Đăng nhập bằng tài khoản khác
+                        Đăng ký bằng tài khoản khác
                      </p>
                      <div className='flex justify-center'>
-                        <button className='h-8 md:h-10 w-32 md:w-40 flex justify-center items-center border border-[#553C26] rounded-lg'>
+                        <button
+                           type='button'
+                           onClick={handleGoogleSignup}
+                           className='h-8 md:h-10 w-32 md:w-40 flex justify-center items-center border border-[#553C26] rounded-lg hover:bg-gray-100 transition-colors duration-200'
+                        >
                            <Image
                               src='/images/google.png'
                               alt='Google Logo'
                               width={50}
                               height={50}
-                              className=' md:h-5 md:w-16'
+                              className='md:h-5 md:w-16'
                            />
                         </button>
                      </div>
 
                      {/* Sign In Link */}
-                     <Link href="/user/signin">
+                     <Link href='/user/signin'>
                         <p className='text-center text-sm md:text-lg text-[#553C26] hover:underline mt-4'>
                            Đã có tài khoản? Đăng nhập
                         </p>
