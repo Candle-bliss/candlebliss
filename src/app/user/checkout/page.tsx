@@ -7,7 +7,10 @@ import { useRouter } from 'next/navigation';
 import Header from '@/app/components/user/nav/page';
 import Footer from '@/app/components/user/footer/page';
 import Toast from '@/app/components/ui/toast/Toast';
+<<<<<<< HEAD
 import { updateOrderPaymentMethod } from '@/app/utils/orderUtils';
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
 // Interfaces
 interface CartItem {
@@ -64,6 +67,7 @@ interface UserInfo {
    phone?: string;
 }
 
+<<<<<<< HEAD
 // Thêm vào phần khai báo interface ở đầu file
 interface InvoiceInfo {
    type: 'personal' | 'company';
@@ -74,6 +78,8 @@ interface InvoiceInfo {
    taxCode?: string;
 }
 
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 // Format price helper function
 const formatPrice = (price: number): string => {
    return new Intl.NumberFormat('vi-VN', {
@@ -181,6 +187,10 @@ export default function CheckoutPage() {
    });
 
    // Ghi chú đơn hàng
+<<<<<<< HEAD
+=======
+   const [orderNote, setOrderNote] = useState('');
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
    // Trạng thái toast thông báo
    const [toast, setToast] = useState({
@@ -203,6 +213,7 @@ export default function CheckoutPage() {
    const [paymentMethod, setPaymentMethod] = useState<'COD' | 'BANKING' | 'MOMO'>('COD');
    const [processingPayment, setProcessingPayment] = useState(false);
 
+<<<<<<< HEAD
    // Thêm các state sau phần khai báo các state khác
    const [needInvoice, setNeedInvoice] = useState(false);
    const [showInvoiceModal, setShowInvoiceModal] = useState(false);
@@ -213,6 +224,8 @@ export default function CheckoutPage() {
       email: '',
    });
 
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
    // Thêm hàm hiện toast message
    const showToastMessage = (message: string, type: 'success' | 'error' | 'info') => {
       setToast({
@@ -321,6 +334,7 @@ export default function CheckoutPage() {
       }
    };
 
+<<<<<<< HEAD
    // When selecting an address
    const handleAddressSelect = (addressId: number) => {
       setSelectedAddressId(addressId);
@@ -332,6 +346,19 @@ export default function CheckoutPage() {
          setShippingFee(30000);
          // Cập nhật tổng tiền
          setTotalPrice(subTotal + 30000 - discount);
+=======
+   // Thêm hàm xử lý khi chọn địa chỉ giao hàng
+   const handleAddressSelect = (addressId: number) => {
+      setSelectedAddressId(addressId);
+
+      // Tìm địa chỉ được chọn để tính phí vận chuyển
+      const selectedAddress = addresses.find((addr) => addr.id === addressId);
+      if (selectedAddress) {
+         const newShippingFee = calculateShippingFee(selectedAddress.province);
+         setShippingFee(newShippingFee);
+         // Cập nhật tổng tiền
+         setTotalPrice(subTotal + newShippingFee - discount);
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          showToastMessage('Đã chọn địa chỉ giao hàng', 'info');
       }
    };
@@ -362,7 +389,29 @@ export default function CheckoutPage() {
       setWards([]);
    };
 
+<<<<<<< HEAD
 
+=======
+   // Cập nhật hàm tính phí vận chuyển dựa trên địa chỉ
+   const calculateShippingFee = (province: string): number => {
+      // Kiểm tra nếu tỉnh/thành phố là TP.HCM (với nhiều cách viết khác nhau)
+      const hcmVariations = [
+         'hồ chí minh',
+         'ho chi minh',
+         'tp hcm',
+         'tp. hcm',
+         'tp.hcm',
+         'thành phố hồ chí minh',
+         'thanh pho ho chi minh',
+      ];
+
+      // Chuyển đổi tên thành phố sang chữ thường để so sánh
+      const normalizedProvince = province.toLowerCase().trim();
+
+      // Nếu là TP.HCM thì phí ship là 20.000đ, ngược lại là 30.000đ
+      return hcmVariations.includes(normalizedProvince) ? 20000 : 30000;
+   };
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
    useEffect(() => {
       const init = async () => {
@@ -748,6 +797,7 @@ export default function CheckoutPage() {
             const defaultAddress = validAddresses.find(
                (addr: { isDefault: boolean }) => addr.isDefault,
             );
+<<<<<<< HEAD
             // When loading addresses
             if (defaultAddress) {
                setSelectedAddressId(defaultAddress.id ?? null);
@@ -762,6 +812,23 @@ export default function CheckoutPage() {
                setShippingFee(30000);
                // Cập nhật tổng tiền
                setTotalPrice(subTotal + 30000 - discount);
+=======
+            if (defaultAddress) {
+               setSelectedAddressId(defaultAddress.id ?? null);
+               // Cập nhật phí vận chuyển dựa trên địa chỉ mặc định
+               const newShippingFee = calculateShippingFee(defaultAddress.province);
+               setShippingFee(newShippingFee);
+               // Cập nhật tổng tiền
+               setTotalPrice(subTotal + newShippingFee - discount);
+            } else if (validAddresses.length > 0) {
+               // Nếu không có địa chỉ mặc định, chọn địa chỉ đầu tiên
+               setSelectedAddressId(validAddresses[0].id ?? null);
+               // Cập nhật phí vận chuyển dựa trên địa chỉ đầu tiên
+               const newShippingFee = calculateShippingFee(validAddresses[0].province);
+               setShippingFee(newShippingFee);
+               // Cập nhật tổng tiền
+               setTotalPrice(subTotal + newShippingFee - discount);
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             }
          } else {
             // Không có địa chỉ
@@ -901,8 +968,13 @@ export default function CheckoutPage() {
                (addressData.user
                   ? `${addressData.user.firstName || ''} ${addressData.user.lastName || ''}`.trim()
                   : userInfo
+<<<<<<< HEAD
                      ? `${userInfo.firstName || ''} ${userInfo.lastName || ''}`.trim()
                      : '');
+=======
+                  ? `${userInfo.firstName || ''} ${userInfo.lastName || ''}`.trim()
+                  : '');
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
             // Lấy số điện thoại từ địa chỉ hoặc từ thông tin người dùng
             const receiverPhone =
@@ -994,6 +1066,7 @@ export default function CheckoutPage() {
 
          const method = isUpdate ? 'PATCH' : 'POST';
 
+<<<<<<< HEAD
          // Tạo dữ liệu gửi lên API, chuyển đổi streetAddress thành street
          const apiAddressData = {
             ...addressData,
@@ -1001,13 +1074,19 @@ export default function CheckoutPage() {
             streetAddress: undefined, // Không gửi trường này lên API
          };
 
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          const response = await fetch(url, {
             method: method,
             headers: {
                'Content-Type': 'application/json',
                Authorization: `Bearer ${token}`,
             },
+<<<<<<< HEAD
             body: JSON.stringify(apiAddressData),
+=======
+            body: JSON.stringify(addressData),
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          });
 
          if (response.ok) {
@@ -1163,9 +1242,16 @@ export default function CheckoutPage() {
          // Chọn địa chỉ vừa tạo/cập nhật
          setSelectedAddressId(formattedAddress.id ?? null);
 
+<<<<<<< HEAD
          // Phí vận chuyển luôn là 30000
          setShippingFee(30000);
          setTotalPrice(subTotal + 30000 - discount);
+=======
+         // Cập nhật phí vận chuyển dựa trên địa chỉ mới
+         const newShippingFee = calculateShippingFee(formattedAddress.province);
+         setShippingFee(newShippingFee);
+         setTotalPrice(subTotal + newShippingFee - discount);
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
          // Ẩn form thêm địa chỉ
          setShowAddAddressForm(false);
@@ -1349,8 +1435,12 @@ export default function CheckoutPage() {
       }
    };
 
+<<<<<<< HEAD
    // Update the handlePlaceOrder function to set the appropriate status for COD orders
 
+=======
+   // Update the handlePlaceOrder function
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
    const handlePlaceOrder = async () => {
       if (!selectedAddressId && !showAddAddressForm) {
          showToastMessage('Vui lòng chọn địa chỉ giao hàng', 'error');
@@ -1397,6 +1487,7 @@ export default function CheckoutPage() {
             address: formattedAddress,
             voucher_code: appliedVoucher?.code || undefined,
             item: formattedItems,
+<<<<<<< HEAD
             // Remove payment_method from initial order creation to use the update endpoint later
             // instead set default status for COD
             status: paymentMethod === 'COD' ? 'Đã đặt hàng' : undefined,
@@ -1409,6 +1500,10 @@ export default function CheckoutPage() {
                companyName: invoiceInfo.type === 'company' ? invoiceInfo.companyName : undefined,
                taxCode: invoiceInfo.type === 'company' ? invoiceInfo.taxCode : undefined
             } : undefined
+=======
+            // Thêm phương thức thanh toán vào dữ liệu đơn hàng
+            payment_method: paymentMethod,
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          };
 
          console.log('Đang tạo đơn hàng mới:', newOrderData);
@@ -1431,6 +1526,7 @@ export default function CheckoutPage() {
             const newOrder = await response.json();
             console.log('Đơn hàng mới đã được tạo:', newOrder);
 
+<<<<<<< HEAD
             // Now update the payment method
             try {
                await updateOrderPaymentMethod(newOrder.id, paymentMethod);
@@ -1440,6 +1536,8 @@ export default function CheckoutPage() {
                // Continue with order process even if payment method update fails
             }
 
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             // Xóa giỏ hàng và voucher sau khi đặt hàng thành công
             localStorage.setItem('cart', '[]');
             localStorage.removeItem('appliedVoucher');
@@ -1449,12 +1547,16 @@ export default function CheckoutPage() {
                await handleMomoPayment(newOrder.id.toString());
             } else {
                // Nếu là các phương thức khác, hiển thị thông báo và chuyển hướng như cũ
+<<<<<<< HEAD
                const successMessage =
                   paymentMethod === 'COD'
                      ? 'Đặt hàng thành công! Đơn hàng của bạn đang được xử lý.'
                      : 'Đặt hàng thành công!';
 
                showToastMessage(successMessage, 'success');
+=======
+               showToastMessage('Đặt hàng thành công!', 'success');
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
                // Chuyển hướng đến trang chi tiết đơn hàng
                setTimeout(() => {
@@ -1462,8 +1564,45 @@ export default function CheckoutPage() {
                }, 2000);
             }
          } else {
+<<<<<<< HEAD
             // Handle error responses as before
             // ...existing error handling code...
+=======
+            const errorData = await response.json().catch(() => ({}));
+            console.error('API Error:', response.status, errorData);
+
+            // Xử lý các mã lỗi cụ thể từ API
+            if (response.status === 400) {
+               throw new Error(errorData.message || 'Thông tin đơn hàng không hợp lệ');
+            } else if (response.status === 401) {
+               showToastMessage('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại', 'error');
+               setTimeout(() => router.push('/user/signin'), 2000);
+               return;
+            } else if (response.status === 404) {
+               throw new Error('Một số sản phẩm trong giỏ hàng không còn tồn tại');
+            } else if (response.status === 409) {
+               throw new Error(errorData.message || 'Một số sản phẩm không còn đủ số lượng');
+            } else if (response.status === 422) {
+               // Xử lý lỗi validation
+               let errorMessage = 'Dữ liệu đơn hàng không hợp lệ: ';
+
+               if (errorData.errors?.item) {
+                  const itemErrors = Object.values(errorData.errors.item)
+                     .map(() => {
+                        const errorMessages = Object.values(errorData.errors.item).join(', ');
+                        return errorMessages;
+                     })
+                     .join('; ');
+                  errorMessage += itemErrors || 'ID sản phẩm không hợp lệ';
+               } else {
+                  errorMessage += errorData.message || 'Vui lòng kiểm tra lại thông tin đơn hàng';
+               }
+
+               throw new Error(errorMessage);
+            } else {
+               throw new Error(errorData.message || 'Không thể tạo đơn hàng. Vui lòng thử lại sau');
+            }
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          }
       } catch (error: unknown) {
          console.error('Error creating new order:', error);
@@ -1664,6 +1803,7 @@ export default function CheckoutPage() {
                                                    {/* Chỉ hiển thị nút xóa khi có nhiều hơn 1 địa chỉ hoặc địa chỉ hiện tại không phải mặc định */}
                                                    {(addresses.length > 1 ||
                                                       !selectedAddress.isDefault) && (
+<<<<<<< HEAD
                                                          <button
                                                             className='text-red-600 text-sm hover:underline'
                                                             onClick={() =>
@@ -1673,6 +1813,17 @@ export default function CheckoutPage() {
                                                             Xóa
                                                          </button>
                                                       )}
+=======
+                                                      <button
+                                                         className='text-red-600 text-sm hover:underline'
+                                                         onClick={() =>
+                                                            handleDeleteAddress(selectedAddress.id!)
+                                                         }
+                                                      >
+                                                         Xóa
+                                                      </button>
+                                                   )}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                                 </div>
                                              </div>
                                           ) : null;
@@ -1838,10 +1989,18 @@ export default function CheckoutPage() {
                                           }}
                                           disabled={addresses.length === 0 && !newAddress.id} // Disable nút hủy khi không có địa chỉ và đang thêm mới
                                           className={`flex-1 py-2 border border-gray-300 rounded-md text-gray-700 
+<<<<<<< HEAD
                               ${addresses.length === 0 && !newAddress.id
                                                 ? 'opacity-50 cursor-not-allowed bg-gray-100'
                                                 : 'hover:bg-gray-50'
                                              }`}
+=======
+                              ${
+                                 addresses.length === 0 && !newAddress.id
+                                    ? 'opacity-50 cursor-not-allowed bg-gray-100'
+                                    : 'hover:bg-gray-50'
+                              }`}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                        >
                                           Hủy
                                        </button>
@@ -1865,18 +2024,34 @@ export default function CheckoutPage() {
 
                      <div className='space-y-3'>
                         <div
+<<<<<<< HEAD
                            className={`border rounded-lg p-4 cursor-pointer ${paymentMethod === 'COD'
                               ? 'border-orange-500 bg-orange-50'
                               : 'border-gray-200'
                               }`}
+=======
+                           className={`border rounded-lg p-4 cursor-pointer ${
+                              paymentMethod === 'COD'
+                                 ? 'border-orange-500 bg-orange-50'
+                                 : 'border-gray-200'
+                           }`}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                            onClick={() => setPaymentMethod('COD')}
                         >
                            <div className='flex items-center'>
                               <div
+<<<<<<< HEAD
                                  className={`w-5 h-5 rounded-full border flex items-center justify-center mr-3 ${paymentMethod === 'COD'
                                     ? 'border-orange-500'
                                     : 'border-gray-400'
                                     }`}
+=======
+                                 className={`w-5 h-5 rounded-full border flex items-center justify-center mr-3 ${
+                                    paymentMethod === 'COD'
+                                       ? 'border-orange-500'
+                                       : 'border-gray-400'
+                                 }`}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                               >
                                  {paymentMethod === 'COD' && (
                                     <div className='w-3 h-3 bg-orange-500 rounded-full'></div>
@@ -1892,18 +2067,34 @@ export default function CheckoutPage() {
                         </div>
 
                         <div
+<<<<<<< HEAD
                            className={`border rounded-lg p-4 cursor-pointer ${paymentMethod === 'BANKING'
                               ? 'border-orange-500 bg-orange-50'
                               : 'border-gray-200'
                               }`}
+=======
+                           className={`border rounded-lg p-4 cursor-pointer ${
+                              paymentMethod === 'BANKING'
+                                 ? 'border-orange-500 bg-orange-50'
+                                 : 'border-gray-200'
+                           }`}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                            onClick={() => setPaymentMethod('BANKING')}
                         >
                            <div className='flex items-center'>
                               <div
+<<<<<<< HEAD
                                  className={`w-5 h-5 rounded-full border flex items-center justify-center mr-3 ${paymentMethod === 'BANKING'
                                     ? 'border-orange-500'
                                     : 'border-gray-400'
                                     }`}
+=======
+                                 className={`w-5 h-5 rounded-full border flex items-center justify-center mr-3 ${
+                                    paymentMethod === 'BANKING'
+                                       ? 'border-orange-500'
+                                       : 'border-gray-400'
+                                 }`}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                               >
                                  {paymentMethod === 'BANKING' && (
                                     <div className='w-3 h-3 bg-orange-500 rounded-full'></div>
@@ -1942,18 +2133,34 @@ export default function CheckoutPage() {
 
                         {/* Add MOMO payment option */}
                         <div
+<<<<<<< HEAD
                            className={`border rounded-lg p-4 cursor-pointer ${paymentMethod === 'MOMO'
                               ? 'border-orange-500 bg-orange-50'
                               : 'border-gray-200'
                               }`}
+=======
+                           className={`border rounded-lg p-4 cursor-pointer ${
+                              paymentMethod === 'MOMO'
+                                 ? 'border-orange-500 bg-orange-50'
+                                 : 'border-gray-200'
+                           }`}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                            onClick={() => setPaymentMethod('MOMO')}
                         >
                            <div className='flex items-center'>
                               <div
+<<<<<<< HEAD
                                  className={`w-5 h-5 rounded-full border flex items-center justify-center mr-3 ${paymentMethod === 'MOMO'
                                     ? 'border-orange-500'
                                     : 'border-gray-400'
                                     }`}
+=======
+                                 className={`w-5 h-5 rounded-full border flex items-center justify-center mr-3 ${
+                                    paymentMethod === 'MOMO'
+                                       ? 'border-orange-500'
+                                       : 'border-gray-400'
+                                 }`}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                               >
                                  {paymentMethod === 'MOMO' && (
                                     <div className='w-3 h-3 bg-orange-500 rounded-full'></div>
@@ -1978,7 +2185,24 @@ export default function CheckoutPage() {
                         </div>
                      </div>
 
+<<<<<<< HEAD
 
+=======
+                     {/* Ghi chú đơn hàng */}
+                     <div className='mt-4'>
+                        <label className='block text-sm font-medium text-gray-700 mb-1'>
+                           Ghi chú đơn hàng (không bắt buộc)
+                        </label>
+                        <textarea
+                           name='orderNote'
+                           value={orderNote}
+                           onChange={(e) => setOrderNote(e.target.value)}
+                           placeholder='Nhập ghi chú cho đơn hàng của bạn...'
+                           rows={3}
+                           className='w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500'
+                        ></textarea>
+                     </div>
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                   </div>
                </div>
 
@@ -2038,6 +2262,14 @@ export default function CheckoutPage() {
                            <span className='text-gray-600'>Phí vận chuyển</span>
                            <div className='text-right'>
                               <span>{formatPrice(shippingFee)}</span>
+<<<<<<< HEAD
+=======
+                              <div className='text-xs text-gray-500 mt-1'>
+                                 {shippingFee === 20000
+                                    ? '(TP. Hồ Chí Minh)'
+                                    : '(Tỉnh/thành phố khác)'}
+                              </div>
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                            </div>
                         </div>
 
@@ -2086,11 +2318,19 @@ export default function CheckoutPage() {
                                           </span>
                                           <span className='text-green-700 font-medium text-sm ml-2'>
                                              {appliedVoucher.percent_off &&
+<<<<<<< HEAD
                                                 Number(appliedVoucher.percent_off) > 0
                                                 ? `Giảm ${appliedVoucher.percent_off}%`
                                                 : `Giảm ${formatPrice(
                                                    Number(appliedVoucher.amount_off),
                                                 )}`}
+=======
+                                             Number(appliedVoucher.percent_off) > 0
+                                                ? `Giảm ${appliedVoucher.percent_off}%`
+                                                : `Giảm ${formatPrice(
+                                                     Number(appliedVoucher.amount_off),
+                                                  )}`}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                           </span>
                                        </div>
                                        <span className='text-green-700 font-medium'>
@@ -2194,6 +2434,7 @@ export default function CheckoutPage() {
                         </Link>{' '}
                         của chúng tôi
                      </p>
+<<<<<<< HEAD
                      {/* Thêm phần checkbox in hóa đơn */}
                      <div className="mt-6 border-t border-gray-200 pt-4">
                         <div className="flex items-center">
@@ -2235,12 +2476,15 @@ export default function CheckoutPage() {
                            </div>
                         )}
                      </div>
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                   </div>
                </div>
             </div>
          </div>
 
          <Footer />
+<<<<<<< HEAD
 
          {/* Modal nhập thông tin hóa đơn */}
          {showInvoiceModal && (
@@ -2416,6 +2660,8 @@ export default function CheckoutPage() {
                </div>
             </div>
          )}
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
       </div>
    );
 }

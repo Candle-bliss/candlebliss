@@ -185,6 +185,7 @@ const ProductTable = ({
    const [categoryNames, setCategoryNames] = useState<Record<number, string>>({});
    const router = useRouter();
 
+<<<<<<< HEAD
    // Add new state to track which detail images are being viewed
    const [detailImagesModal, setDetailImagesModal] = useState<{
       detailId: number;
@@ -203,6 +204,8 @@ const ProductTable = ({
       }
    };
 
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
    // Filter products based on search term
    const filteredProducts = useMemo(() => {
       if (!searchTerm.trim()) return products;
@@ -425,6 +428,7 @@ const ProductTable = ({
 
                <div className='flex items-center space-x-2'>
                   <button
+<<<<<<< HEAD
                      onClick={() => router.push('/seller/categories')}
                      className='inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 shadow-sm'
                   >
@@ -432,6 +436,8 @@ const ProductTable = ({
                      Thêm danh mục
                   </button>
                   <button
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                      onClick={() => router.push('/seller/products/createproduct/step1')}
                      className='inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 shadow-sm'
                   >
@@ -594,8 +600,13 @@ const ProductTable = ({
                                              ? `${categoryNames[product.category_id]} `
                                              : `Đang tải... (ID: ${product.category_id})`
                                           : product.categories && product.categories.length > 0
+<<<<<<< HEAD
                                              ? `${product.categories[0].name} `
                                              : 'Chưa có danh mục'}
+=======
+                                          ? `${product.categories[0].name} `
+                                          : 'Chưa có danh mục'}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                     </p>
                                  </div>
                               </div>
@@ -619,18 +630,33 @@ const ProductTable = ({
 
                            <div className='hidden md:flex items-center'>
                               <span
+<<<<<<< HEAD
                                  className={`px-2.5 py-1 text-xs rounded-full ${activeVariants > 0
                                     ? 'bg-green-100 text-green-800'
                                     : totalVariants === 0
                                        ? 'bg-gray-100 text-gray-800'
                                        : 'bg-yellow-100 text-yellow-800'
                                     }`}
+=======
+                                 className={`px-2.5 py-1 text-xs rounded-full ${
+                                    activeVariants > 0
+                                       ? 'bg-green-100 text-green-800'
+                                       : totalVariants === 0
+                                       ? 'bg-gray-100 text-gray-800'
+                                       : 'bg-yellow-100 text-yellow-800'
+                                 }`}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                               >
                                  {activeVariants > 0
                                     ? 'Đang kinh doanh'
                                     : totalVariants === 0
+<<<<<<< HEAD
                                        ? 'Chưa có phiên bản'
                                        : 'Chưa kinh doanh'}
+=======
+                                    ? 'Chưa có phiên bản'
+                                    : 'Chưa kinh doanh'}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                               </span>
                            </div>
 
@@ -665,18 +691,33 @@ const ProductTable = ({
                               </div>
                               <div className='text-right'>
                                  <span
+<<<<<<< HEAD
                                     className={`text-xs font-medium px-2 py-0.5 rounded-full ${activeVariants > 0
                                        ? 'bg-green-100 text-green-800'
                                        : totalVariants === 0
                                           ? 'bg-gray-100 text-gray-800'
                                           : 'bg-yellow-100 text-yellow-800'
                                        }`}
+=======
+                                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                                       activeVariants > 0
+                                          ? 'bg-green-100 text-green-800'
+                                          : totalVariants === 0
+                                          ? 'bg-gray-100 text-gray-800'
+                                          : 'bg-yellow-100 text-yellow-800'
+                                    }`}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                  >
                                     {activeVariants > 0
                                        ? 'Đang kinh doanh'
                                        : totalVariants === 0
+<<<<<<< HEAD
                                           ? 'Chưa có phiên bản'
                                           : 'Chưa kinh doanh'}
+=======
+                                       ? 'Chưa có phiên bản'
+                                       : 'Chưa kinh doanh'}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                  </span>
                               </div>
                               <div className='col-span-2 text-xs text-gray-500 mt-1'>
@@ -684,10 +725,17 @@ const ProductTable = ({
                                  <span className='text-gray-700'>
                                     {product.category_id
                                        ? categoryNames[product.category_id] ||
+<<<<<<< HEAD
                                        `Đang tải... (ID: ${product.category_id})`
                                        : product.categories && product.categories.length > 0
                                           ? `${product.categories[0].name} (ID: ${product.categories[0].id})`
                                           : 'Chưa có danh mục'}
+=======
+                                         `Đang tải... (ID: ${product.category_id})`
+                                       : product.categories && product.categories.length > 0
+                                       ? `${product.categories[0].name} (ID: ${product.categories[0].id})`
+                                       : 'Chưa có danh mục'}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                  </span>
                               </div>
                            </div>
@@ -762,6 +810,7 @@ const ProductTable = ({
                                                    {/* Các cột khác giữ nguyên */}
                                                    <td className='px-6 py-4 whitespace-nowrap'>
                                                       <div className='flex items-center'>
+<<<<<<< HEAD
                                                          <button
                                                             onClick={() => detail.images?.length > 0 && showDetailImages(detail.id, detail.images)}
                                                             className='h-10 w-10 flex-shrink-0 mr-3 border rounded-md overflow-hidden hover:opacity-80 transition-opacity'
@@ -792,6 +841,11 @@ const ProductTable = ({
                                                                </div>
                                                             )}
                                                          </button>
+=======
+                                                         <div className='h-10 w-10 flex-shrink-0 mr-3 border rounded-full overflow-hidden'>
+                                                            {/* Nội dung cũ */}
+                                                         </div>
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                                          <span className='text-gray-900 text-sm'>
                                                             #{detail.id}
                                                          </span>
@@ -808,10 +862,18 @@ const ProductTable = ({
                                                    </td>
                                                    <td className='px-6 py-4 whitespace-nowrap text-sm'>
                                                       <span
+<<<<<<< HEAD
                                                          className={`font-medium ${detail.quantities === 0
                                                             ? 'text-red-500'
                                                             : 'text-gray-700'
                                                             }`}
+=======
+                                                         className={`font-medium ${
+                                                            detail.quantities === 0
+                                                               ? 'text-red-500'
+                                                               : 'text-gray-700'
+                                                         }`}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                                       >
                                                          {detail.quantities}
                                                       </span>
@@ -825,7 +887,11 @@ const ProductTable = ({
                                                       {priceInfo.base_price ? (
                                                          <div>
                                                             {effectiveDiscountPrice &&
+<<<<<<< HEAD
                                                                effectiveDiscountPrice > 0 ? (
+=======
+                                                            effectiveDiscountPrice > 0 ? (
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                                                <>
                                                                   {/* Hiển thị giá sau khi giảm */}
                                                                   <div className='flex items-center'>
@@ -890,10 +956,18 @@ const ProductTable = ({
 
                                                    <td className='px-6 py-4 whitespace-nowrap'>
                                                       <span
+<<<<<<< HEAD
                                                          className={`px-2 py-1 text-xs rounded-full ${detail.isActive
                                                             ? 'bg-green-100 text-green-800'
                                                             : 'bg-gray-100 text-gray-800'
                                                             }`}
+=======
+                                                         className={`px-2 py-1 text-xs rounded-full ${
+                                                            detail.isActive
+                                                               ? 'bg-green-100 text-green-800'
+                                                               : 'bg-gray-100 text-gray-800'
+                                                         }`}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                                       >
                                                          {detail.isActive
                                                             ? 'Đang bán'
@@ -921,6 +995,7 @@ const ProductTable = ({
                })}
             </div>
          )}
+<<<<<<< HEAD
          {/* Modal for viewing product detail images */}
          {detailImagesModal && (
             <div className='fixed inset-0 bg-black/70 flex items-center justify-center z-50'>
@@ -1003,6 +1078,8 @@ const ProductTable = ({
                </div>
             </div>
          )}
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
       </div>
    );
 };
@@ -1100,8 +1177,13 @@ export default function ProductManagement() {
                      images: Array.isArray(product.images)
                         ? product.images
                         : product.images
+<<<<<<< HEAD
                            ? [product.images]
                            : [],
+=======
+                        ? [product.images]
+                        : [],
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                      details: [],
                      pricing: [],
                      categories: product.categories || [],
@@ -1116,8 +1198,13 @@ export default function ProductManagement() {
                   images: Array.isArray(detailData.images)
                      ? detailData.images
                      : detailData.images
+<<<<<<< HEAD
                         ? [detailData.images]
                         : [],
+=======
+                     ? [detailData.images]
+                     : [],
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                   details: detailData.details || [],
                   pricing: [], // We'll fetch pricing separately
                   categories: detailData.categories || [],
@@ -1128,8 +1215,13 @@ export default function ProductManagement() {
                   images: Array.isArray(product.images)
                      ? product.images
                      : product.images
+<<<<<<< HEAD
                         ? [product.images]
                         : [],
+=======
+                     ? [product.images]
+                     : [],
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                   details: [],
                   pricing: [],
                   categories: product.categories || [],
@@ -1349,7 +1441,11 @@ export default function ProductManagement() {
                // Check if any product pricing has an active discount
                return product.pricing?.some((price) => {
                   // Check if there's a discount price
+<<<<<<< HEAD
                   const hasDiscount = price.discount_price && price.discount_price > 0;
+=======
+                  const hasDiscount = price.discount_price > 0;
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
                   // Check if the promotion is still active (not expired)
                   const isActive = isPromotionActive(price.end_date);
@@ -1381,7 +1477,11 @@ export default function ProductManagement() {
          'Hoạt động': products.filter((p) => p.details?.some((d) => d.isActive)).length,
          'Khuyến Mãi': products.filter((p) =>
             p.pricing?.some(
+<<<<<<< HEAD
                (price) => price.discount_price && price.discount_price > 0 && isPromotionActive(price.end_date),
+=======
+               (price) => price.discount_price > 0 && isPromotionActive(price.end_date),
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             ),
          ).length,
          'Hết hàng': products.filter((p) => {
@@ -1413,18 +1513,34 @@ export default function ProductManagement() {
                            <button
                               key={tab.id}
                               onClick={() => setActiveTab(tab.id)}
+<<<<<<< HEAD
                               className={`py-2 px-4 border-b-2 font-medium text-sm flex items-center mr-6 ${activeTab === tab.id
                                  ? 'border-amber-500 text-amber-600'
                                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                  }`}
+=======
+                              className={`py-2 px-4 border-b-2 font-medium text-sm flex items-center mr-6 ${
+                                 activeTab === tab.id
+                                    ? 'border-amber-500 text-amber-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                              }`}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                            >
                               {tab.label}
                               {!loading && (
                                  <span
+<<<<<<< HEAD
                                     className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${activeTab === tab.id
                                        ? 'bg-amber-100 text-amber-800'
                                        : 'bg-gray-100 text-gray-600'
                                        }`}
+=======
+                                    className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${
+                                       activeTab === tab.id
+                                          ? 'bg-amber-100 text-amber-800'
+                                          : 'bg-gray-100 text-gray-600'
+                                    }`}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                  >
                                     {tabCounts[tab.id]}
                                  </span>

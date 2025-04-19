@@ -54,12 +54,20 @@ export default function ForgotPasswordPage() {
       return () => clearInterval(interval);
    }, [isTimerActive, countdown]);
 
+<<<<<<< HEAD
    // Cập nhật hàm handleSendOTP để gửi email quên mật khẩu
+=======
+   // Cập nhật hàm handleSendOTP mà không cần kiểm tra email trước
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
    const handleSendOTP = async () => {
       if (email && !emailError) {
          setIsSendingOTP(true);
          try {
+<<<<<<< HEAD
             // Gọi API gửi yêu cầu quên mật khẩu
+=======
+            // Gọi API gửi OTP và kiểm tra phản hồi
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             const response = await fetch('http://68.183.226.198:3000/api/v1/auth/forgot/password', {
                method: 'POST',
                headers: {
@@ -84,11 +92,19 @@ export default function ForgotPasswordPage() {
 
             // Xử lý các trường hợp
             if (response.ok) {
+<<<<<<< HEAD
                // Thành công - email tồn tại và mã hash đã được gửi
                setToast({
                   show: true,
                   message:
                      'Mã xác thực đã được gửi đến email của bạn. Vui lòng kiểm tra cả thư mục spam hoặc junk.',
+=======
+               // Thành công - email tồn tại và OTP đã được gửi
+               setToast({
+                  show: true,
+                  message:
+                     'Mã OTP đã được gửi đến email của bạn. Vui lòng kiểm tra cả thư mục spam hoặc junk.',
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                   type: 'success',
                });
                setCountdown(180); // 3 phút
@@ -96,7 +112,11 @@ export default function ForgotPasswordPage() {
             } else {
                // API trả về lỗi
                if (response.status === 404) {
+<<<<<<< HEAD
                   // Email không tồn tại
+=======
+                  // Email không tồn tại (giả sử mã lỗi 404 = email không tìm thấy)
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                   setToast({
                      show: true,
                      message: 'Email này không tồn tại trong hệ thống. Vui lòng kiểm tra lại.',
@@ -105,7 +125,11 @@ export default function ForgotPasswordPage() {
                } else {
                   // Các lỗi khác
                   const errorMessage =
+<<<<<<< HEAD
                      data?.message || 'Không thể gửi yêu cầu đặt lại mật khẩu, vui lòng thử lại sau.';
+=======
+                     data?.message || 'Không thể gửi mã OTP, vui lòng thử lại sau.';
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                   setToast({
                      show: true,
                      message: errorMessage,
@@ -114,7 +138,11 @@ export default function ForgotPasswordPage() {
                }
             }
          } catch (error: unknown) {
+<<<<<<< HEAD
             console.error('Password reset request error:', error);
+=======
+            console.error('OTP send error:', error);
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             let errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau.';
 
             if (error instanceof Error) {
@@ -193,7 +221,11 @@ export default function ForgotPasswordPage() {
       validateConfirmPassword(confirmPassword);
       validateHash(hash);
 
+<<<<<<< HEAD
       if (emailError || passwordError || confirmPasswordError || hashError) {
+=======
+      if (emailError || passwordError || confirmPasswordError || otpError) {
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          return;
       }
 
@@ -205,8 +237,14 @@ export default function ForgotPasswordPage() {
                'Content-Type': 'application/json',
             },
             body: JSON.stringify({
+<<<<<<< HEAD
                password: newPassword,
                hash: hash
+=======
+               email,
+               newPassword,
+               otp,
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             }),
          });
 
@@ -294,6 +332,7 @@ export default function ForgotPasswordPage() {
                                  onClick={handleSendOTP}
                                  disabled={isTimerActive || !email || !!emailError || isSendingOTP}
                                  className={`absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 text-sm 
+<<<<<<< HEAD
                                     ${isTimerActive
                                        ? 'text-gray-500'
                                        : 'text-[#553C26] hover:text-[#442f1e]'
@@ -301,13 +340,29 @@ export default function ForgotPasswordPage() {
                                     ${isSendingOTP || !email || !!emailError
                                        ? 'cursor-not-allowed opacity-50'
                                        : 'cursor-pointer'
+=======
+                                    ${
+                                       isTimerActive
+                                          ? 'text-gray-500'
+                                          : 'text-[#553C26] hover:text-[#442f1e]'
+                                    }
+                                    ${
+                                       isSendingOTP || !email || !!emailError
+                                          ? 'cursor-not-allowed opacity-50'
+                                          : 'cursor-pointer'
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                     }`}
                               >
                                  {isSendingOTP
                                     ? 'Đang gửi...'
                                     : isTimerActive
+<<<<<<< HEAD
                                        ? formatTime(countdown)
                                        : 'Gửi mã'}
+=======
+                                    ? formatTime(countdown)
+                                    : 'Gửi mã'}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                               </button>
                            </div>
                            {emailError && <p className='text-red-500 text-sm mt-1'>{emailError}</p>}
@@ -378,8 +433,14 @@ export default function ForgotPasswordPage() {
                         <button
                            type='submit'
                            disabled={isResetting}
+<<<<<<< HEAD
                            className={`w-full bg-[#553C26] text-white py-3 rounded-lg hover:bg-[#442f1e] transition-colors mt-6 ${isResetting ? 'opacity-70 cursor-not-allowed' : ''
                               }`}
+=======
+                           className={`w-full bg-[#553C26] text-white py-3 rounded-lg hover:bg-[#442f1e] transition-colors mt-6 ${
+                              isResetting ? 'opacity-70 cursor-not-allowed' : ''
+                           }`}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                         >
                            {isResetting ? 'Đang xử lý...' : 'Xác Nhận'}
                         </button>

@@ -3,7 +3,11 @@
 import React from 'react';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
+<<<<<<< HEAD
 import { Calendar } from 'lucide-react';
+=======
+import { Calendar, Search, Bell } from 'lucide-react';
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 import { FaSpinner } from 'react-icons/fa';
 
 // Define an interface for user data
@@ -118,6 +122,28 @@ export default function Header() {
 
                {/* Right side of header */}
                <div className='flex items-center'>
+<<<<<<< HEAD
+=======
+                  {/* Search */}
+                  <div className='mr-4 relative'>
+                     <input
+                        type='text'
+                        placeholder='Search...'
+                        className='pl-8 pr-4 py-1 rounded-lg border border-gray-300 focus:outline-none focus:border-amber-500'
+                     />
+                     <div className='absolute left-2 top-1/2 transform -translate-y-1/2'>
+                        <Search size={16} className='text-gray-400' />
+                     </div>
+                  </div>
+
+                  {/* Notifications */}
+                  <div className='mr-4 relative'>
+                     <Bell size={20} className='text-white' />
+                     <span className='absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center'>
+                        3
+                     </span>
+                  </div>
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
                   {/* User dropdown with avatar */}
                   <div className='relative'>

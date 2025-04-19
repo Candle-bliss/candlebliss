@@ -145,7 +145,11 @@ export default function VoucherDetail() {
 
       try {
          const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+<<<<<<< HEAD
          const response = await fetch(`http://68.183.226.198:3000/api/v1/vouchers/${params.id}/remove`, {
+=======
+         const response = await fetch(`http://68.183.226.198:3000/api/v1/vouchers/${params.id}`, {
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             method: 'DELETE',
             headers: {
                'Content-Type': 'application/json',

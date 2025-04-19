@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 'use client';
+=======
+'use client'
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
 import React from 'react';
 
@@ -12,6 +16,10 @@ import {
    ShoppingBag,
    CreditCard,
    Settings,
+<<<<<<< HEAD
+=======
+   Users,
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
    ChevronDown,
    ChevronUp,
    Globe, // Import Globe icon for store/client navigation
@@ -30,6 +38,10 @@ export default function MenuSideBar() {
       window.location.href = '/seller/signin';
    };
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
    return (
       <div className='min-h-screen  flex'>
          {/* Sidebar */}
@@ -51,7 +63,11 @@ export default function MenuSideBar() {
                   <Link
                      href='/user/home'
                      className='flex items-center p-2 text-emerald-600 hover:bg-emerald-50 rounded border border-emerald-200 transition-colors'
+<<<<<<< HEAD
                      rel='noopener noreferrer'
+=======
+                     rel="noopener noreferrer"
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                   >
                      <Globe size={18} className='mr-2' />
                      <span>Xem Cửa Hàng</span>
@@ -91,7 +107,11 @@ export default function MenuSideBar() {
                            href='/products/gift-sets'
                            className='flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded'
                         >
+<<<<<<< HEAD
                            <span className='text-sm'>Set quà</span>
+=======
+                           <span className='text-sm'>Tạo set quà</span>
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                         </Link>
                         <Link
                            href='/seller/vouchers'
@@ -99,12 +119,22 @@ export default function MenuSideBar() {
                         >
                            <span className='text-sm'>Khuyến Mãi</span>
                         </Link>
+<<<<<<< HEAD
 
+=======
+                        <Link
+                           href='/products/price-list'
+                           className='flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded'
+                        >
+                           <span className='text-sm'>Bảng giá</span>
+                        </Link>
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                      </div>
                   )}
                </div>
                <div className='px-4 py-2'>
                   <Link
+<<<<<<< HEAD
                      href='/seller/orders'
                      className='flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded'
                   >
@@ -131,6 +161,22 @@ export default function MenuSideBar() {
                   >
                      <CreditCard size={18} className='mr-2' />
                      <span>Quản Lý Đổi trả</span>
+=======
+                     href='/orders'
+                     className='flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded'
+                  >
+                     <ShoppingBag size={18} className='mr-2' />
+                     <span>Quản Lý Đơn Hàng</span>
+                  </Link>
+               </div>
+               <div className='px-4 py-2'>
+                  <Link
+                     href='/payments'
+                     className='flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded'
+                  >
+                     <CreditCard size={18} className='mr-2' />
+                     <span>Quản Lý Đối trả</span>
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                   </Link>
                </div>
                <div className='px-4 py-2'>
@@ -144,6 +190,7 @@ export default function MenuSideBar() {
                </div>
                <div className='px-4 py-2'>
                   <Link
+<<<<<<< HEAD
                      href='/seller/reviews'
                      className='flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded'
                   >
@@ -152,6 +199,15 @@ export default function MenuSideBar() {
                   </Link>
                </div>
 
+=======
+                     href='/permissions'
+                     className='flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded'
+                  >
+                     <Users size={18} className='mr-2' />
+                     <span>Phân Quyền</span>
+                  </Link>
+               </div>
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                <div className='px-4 py-2'>
                   <Link
                      href='/settings'

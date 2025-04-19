@@ -7,8 +7,11 @@ import { useRouter, useSearchParams } from 'next/navigation'; // Add useSearchPa
 import Header from '@/app/components/user/nav/page';
 import Footer from '@/app/components/user/footer/page';
 import Toast from '@/app/components/ui/toast/Toast';
+<<<<<<< HEAD
 import ReturnRequestModal from '@/app/components/user/returnrequest/ReturnRequest';
 import { retryOrderPayment } from '@/app/utils/orderUtils';
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
 // Interfaces
 interface OrderItem {
@@ -16,6 +19,7 @@ interface OrderItem {
    status: string;
    unit_price: string;
    product_detail_id: number;
+<<<<<<< HEAD
    product_id: string; // Make sure this exists in the interface
    quantity: number;
    totalPrice: string;
@@ -54,6 +58,15 @@ interface OrderItem {
          public_id: string;
       }>;
    };
+=======
+   quantity: number;
+   totalPrice: string;
+   product?: {
+      name: string;
+      images: string[];
+   };
+   __entity: string;
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 }
 
 interface Order {
@@ -99,6 +112,7 @@ const formatDate = (dateString: string): string => {
 // Trạng thái đơn hàng và màu sắc tương ứng
 const orderStatusColors: Record<string, { bg: string; text: string; border: string }> = {
    'Đơn hàng vừa được tạo': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+<<<<<<< HEAD
    'Đang chờ thanh toán': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
    'Thanh toán thất bại': { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
    'Thanh toán thành công': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
@@ -121,6 +135,15 @@ const orderStatusColors: Record<string, { bg: string; text: string; border: stri
    'Hoàn tiền thất bại': { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
 };
 
+=======
+   'Đang xử lý': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
+   'Đang giao hàng': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+   'Đã giao hàng': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
+   'Đã hủy': { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
+};
+
+// Create a client component that uses searchParams
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 function OrderFilter({ onFilterChange }: { onFilterChange: (filterId: string | null) => void }) {
    const searchParams = useSearchParams();
    const filterStatus = searchParams.get('status');
@@ -129,6 +152,7 @@ function OrderFilter({ onFilterChange }: { onFilterChange: (filterId: string | n
       onFilterChange(filterStatus);
    }, [searchParams, onFilterChange]);
 
+<<<<<<< HEAD
    return null;
 }
 
@@ -216,6 +240,11 @@ const isDeliveredForTwoDays = (order: Order): boolean => {
    return now - updatedDate >= twoDaysInMs;
 };
 
+=======
+   return null; // This component doesn't render anything, just processes the search params
+}
+
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 export default function OrderPage() {
    const router = useRouter();
    const [loading, setLoading] = useState(true);
@@ -228,6 +257,7 @@ export default function OrderPage() {
       type: 'info' as 'success' | 'error' | 'info',
    });
 
+<<<<<<< HEAD
    // Add a state to track which product details have been fetched
    const [fetchedDetails, setFetchedDetails] = useState<Record<number, boolean>>({});
 
@@ -241,6 +271,8 @@ export default function OrderPage() {
    // Add this state to track which order is currently processing payment
    const [processingPaymentOrderId, setProcessingPaymentOrderId] = useState<number | null>(null);
 
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
    // Wrap with useCallback
    const showToastMessage = useCallback((message: string, type: 'success' | 'error' | 'info') => {
       setToast({
@@ -299,6 +331,7 @@ export default function OrderPage() {
       [router, showToastMessage],
    );
 
+<<<<<<< HEAD
    // Add a function to fetch product details
    const fetchProductDetails = useCallback(
       async (orders: Order[]) => {
@@ -416,6 +449,8 @@ export default function OrderPage() {
       return [];
    };
 
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
    // Update useEffect with all dependencies
    useEffect(() => {
       const init = async () => {
@@ -443,6 +478,7 @@ export default function OrderPage() {
       init();
    }, [router, loadOrders, showToastMessage]);
 
+<<<<<<< HEAD
    // Call fetchProductDetails when orders change
    useEffect(() => {
       if (orders.length > 0) {
@@ -451,11 +487,15 @@ export default function OrderPage() {
    }, [orders, fetchProductDetails]);
 
    // Modified handleCancelOrder function to only allow cancellation in specific statuses
+=======
+   // Update handleCancelOrder with proper error typing
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
    const handleCancelOrder = async (orderId: number) => {
       if (!confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) {
          return;
       }
 
+<<<<<<< HEAD
       // Find the order
       const orderToCancel = orders.find(order => order.id === orderId);
 
@@ -471,6 +511,8 @@ export default function OrderPage() {
          return;
       }
 
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
       try {
          setLoading(true);
          const token = localStorage.getItem('token');
@@ -481,6 +523,7 @@ export default function OrderPage() {
             return;
          }
 
+<<<<<<< HEAD
          // Use query parameter for status
          const encodedStatus = encodeURIComponent('Đã huỷ');
          // Call API to cancel the order
@@ -509,6 +552,27 @@ export default function OrderPage() {
          // Update the state after successful API call
          setOrders((prevOrders) =>
             prevOrders.map((order) => (order.id === orderId ? { ...order, status: 'Đã huỷ' } : order))
+=======
+         // Gọi API để hủy đơn hàng
+         const response = await fetch(`http://68.183.226.198:3000/api/orders/${orderId}/cancel`, {
+            method: 'PUT',
+            headers: {
+               Authorization: `Bearer ${token}`,
+               'Content-Type': 'application/json',
+            },
+         });
+
+         if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Không thể hủy đơn hàng');
+         }
+
+         // Cập nhật trạng thái trong state
+         setOrders((prevOrders) =>
+            prevOrders.map((order) =>
+               order.id === orderId ? { ...order, status: 'Đã hủy' } : order,
+            ),
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          );
 
          showToastMessage('Đơn hàng đã được hủy thành công', 'success');
@@ -528,6 +592,7 @@ export default function OrderPage() {
       }
    };
 
+<<<<<<< HEAD
    // Within the OrderPage component, add this new function to handle completing the order
    const handleCompleteOrder = async (orderId: number) => {
       // Show warning confirmation dialog
@@ -685,6 +750,8 @@ export default function OrderPage() {
       }
    };
 
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
    // Handle filter change
    const handleFilterChange = useCallback((filterStatus: string | null) => {
       setStatusFilter(filterStatus);
@@ -720,16 +787,25 @@ export default function OrderPage() {
    const getPaymentMethodIcon = (method: string) => {
       switch (method) {
          case 'COD':
+<<<<<<< HEAD
             return '/images/logo.png';
          case 'BANKING':
             return '/images/payment/bank.png';
          case 'MOMO':
             return '/images/momo-logo.png';
+=======
+            return '/images/payment/cod.png';
+         case 'BANKING':
+            return '/images/payment/bank.png';
+         case 'MOMO':
+            return '/images/payment/momo-logo.png';
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          default:
             return '/images/payment/cod.png';
       }
    };
 
+<<<<<<< HEAD
    // Thêm hàm này trong component OrderPage
 
    // Hàm cập nhật trạng thái đơn hàng khi hết thời gian thanh toán
@@ -977,6 +1053,8 @@ export default function OrderPage() {
       checkMomoPayment();
    }, []);
 
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
    if (loading) {
       return (
          <div className='bg-[#F1EEE9] min-h-screen'>
@@ -1015,10 +1093,18 @@ export default function OrderPage() {
             <div className='flex overflow-x-auto mb-6 gap-2'>
                <Link
                   href='/user/order'
+<<<<<<< HEAD
                   className={`px-4 py-2 whitespace-nowrap rounded-md ${!statusFilter
                      ? 'bg-orange-100 text-orange-700 font-medium'
                      : 'bg-white hover:bg-gray-100'
                      }`}
+=======
+                  className={`px-4 py-2 whitespace-nowrap rounded-md ${
+                     !statusFilter
+                        ? 'bg-orange-100 text-orange-700 font-medium'
+                        : 'bg-white hover:bg-gray-100'
+                  }`}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                >
                   Tất cả
                </Link>
@@ -1026,10 +1112,18 @@ export default function OrderPage() {
                   <Link
                      key={status}
                      href={`/user/order?status=${encodeURIComponent(status)}`}
+<<<<<<< HEAD
                      className={`px-4 py-2 whitespace-nowrap rounded-md ${statusFilter === status
                         ? 'bg-orange-100 text-orange-700 font-medium'
                         : 'bg-white hover:bg-gray-100'
                         }`}
+=======
+                     className={`px-4 py-2 whitespace-nowrap rounded-md ${
+                        statusFilter === status
+                           ? 'bg-orange-100 text-orange-700 font-medium'
+                           : 'bg-white hover:bg-gray-100'
+                     }`}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                   >
                      {status}
                   </Link>
@@ -1039,6 +1133,17 @@ export default function OrderPage() {
             {filteredOrders.length === 0 ? (
                <div className='bg-white rounded-lg shadow p-8 text-center'>
                   <div className='flex flex-col items-center'>
+<<<<<<< HEAD
+=======
+                     <div className='mb-4'>
+                        <Image
+                           src='/images/empty-order.png'
+                           alt='No orders'
+                           width={150}
+                           height={150}
+                        />
+                     </div>
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                      <h3 className='text-xl font-medium mb-2'>Bạn chưa có đơn hàng nào</h3>
                      <p className='text-gray-500 mb-6'>
                         Hãy trải nghiệm mua sắm và quay lại đây để xem đơn hàng của bạn
@@ -1070,6 +1175,7 @@ export default function OrderPage() {
                                     {formatDate(order.createdAt)}
                                  </span>
                               </p>
+<<<<<<< HEAD
 
                               {/* Add countdown timer for both newly created and waiting for payment status */}
                               {(order.status === 'Đơn hàng vừa được tạo' || order.status === 'Đang chờ thanh toán') &&
@@ -1081,6 +1187,8 @@ export default function OrderPage() {
                                        status={order.status}
                                     />
                                  )}
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                            </div>
                            <div className='flex items-center'>
                               {order.method_payment && (
@@ -1096,10 +1204,17 @@ export default function OrderPage() {
                                        {order.method_payment === 'COD'
                                           ? 'Thanh toán khi nhận hàng'
                                           : order.method_payment === 'BANKING'
+<<<<<<< HEAD
                                              ? 'Chuyển khoản ngân hàng'
                                              : order.method_payment === 'MOMO'
                                                 ? 'Ví MoMo'
                                                 : 'Không xác định'}
+=======
+                                          ? 'Chuyển khoản ngân hàng'
+                                          : order.method_payment === 'MOMO'
+                                          ? 'Ví MoMo'
+                                          : 'Không xác định'}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                     </span>
                                  </div>
                               )}
@@ -1112,6 +1227,7 @@ export default function OrderPage() {
                            {order.item.map((item, index) => (
                               <div
                                  key={item.id}
+<<<<<<< HEAD
                                  className={`flex py-3 ${index < order.item.length - 1 ? 'border-b border-gray-100' : ''
                                     }`}
                               >
@@ -1122,18 +1238,34 @@ export default function OrderPage() {
                                           item.product?.images?.[0]?.path ||
                                           '/images/default-product.png'
                                        }
+=======
+                                 className={`flex py-3 ${
+                                    index < order.item.length - 1 ? 'border-b border-gray-100' : ''
+                                 }`}
+                              >
+                                 <div className='relative w-16 h-16 bg-gray-100 rounded'>
+                                    {/* Placeholder nếu không có ảnh sản phẩm */}
+                                    <Image
+                                       src={item.product?.images?.[0] || '/images/placeholder.jpg'}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                        alt={
                                           item.product?.name ||
                                           `Sản phẩm #${item.product_detail_id}`
                                        }
+<<<<<<< HEAD
                                        fill
                                        sizes='64px'
                                        style={{ objectFit: 'contain' }}
+=======
+                                       layout='fill'
+                                       objectFit='contain'
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                        className='p-2'
                                     />
                                  </div>
                                  <div className='ml-3 flex-1'>
                                     <div className='flex justify-between'>
+<<<<<<< HEAD
                                        <div>
                                           <p className='font-medium text-sm'>
                                              {item.product?.name ||
@@ -1149,6 +1281,12 @@ export default function OrderPage() {
                                              </p>
                                           )}
                                        </div>
+=======
+                                       <p className='font-medium text-sm'>
+                                          {item.product?.name ||
+                                             `Sản phẩm #${item.product_detail_id}`}
+                                       </p>
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                        <p className='text-orange-600 font-medium text-sm'>
                                           {formatPrice(item.totalPrice)}
                                        </p>
@@ -1195,9 +1333,16 @@ export default function OrderPage() {
                            </div>
 
                            <div className='flex justify-between items-center mt-4'>
+<<<<<<< HEAD
                               <span className='text-sm text-gray-600'>
                                  Địa chỉ giao hàng: {order.address}
                               </span>
+=======
+                              <div className='text-sm text-gray-500'>
+                                 <span className='font-medium'>Giao đến:</span> {order.address}
+                              </div>
+
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                               <div className='flex space-x-2'>
                                  <Link
                                     href={`/user/order/${order.id}`}
@@ -1206,6 +1351,7 @@ export default function OrderPage() {
                                     Chi tiết
                                  </Link>
 
+<<<<<<< HEAD
                                  {/* Add Retry Payment button for waiting orders */}
                                  {order.status === 'Đang chờ thanh toán' && (() => {
                                     // Calculate if it's still within 15 minutes
@@ -1278,11 +1424,45 @@ export default function OrderPage() {
                                  {(order.status === 'Hoàn thành' || order.status === 'Đổi trả thành công') && (
                                     <Link
                                        href={`/user/order/rating`}
+=======
+                                 {order.status === 'Đơn hàng vừa được tạo' && (
+                                    <button
+                                       onClick={() => handleCancelOrder(order.id)}
+                                       className='text-sm text-red-600 border border-red-300 bg-white hover:bg-red-50 px-3 py-1 rounded'
+                                    >
+                                       Hủy đơn
+                                    </button>
+                                 )}
+
+                                 {order.status === 'Đã giao hàng' && (
+                                    <Link
+                                       href={`/user/review?order=${order.id}`}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                        className='text-sm text-green-600 border border-green-300 bg-white hover:bg-green-50 px-3 py-1 rounded'
                                     >
                                        Đánh giá
                                     </Link>
                                  )}
+<<<<<<< HEAD
+=======
+
+                                 {(order.status === 'Đã hủy' ||
+                                    order.status === 'Đã giao hàng') && (
+                                    <button
+                                       onClick={() => {
+                                          // Lưu thông tin sản phẩm vào localStorage để mua lại
+                                          // Đây chỉ là giả định, bạn cần thực hiện logic riêng
+                                          showToastMessage(
+                                             'Đang thêm sản phẩm vào giỏ hàng...',
+                                             'info',
+                                          );
+                                       }}
+                                       className='text-sm text-blue-600 border border-blue-300 bg-white hover:bg-blue-50 px-3 py-1 rounded'
+                                    >
+                                       Mua lại
+                                    </button>
+                                 )}
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                               </div>
                            </div>
                         </div>
@@ -1293,6 +1473,7 @@ export default function OrderPage() {
          </div>
 
          <Footer />
+<<<<<<< HEAD
          {selectedOrderId !== null && (
             <ReturnRequestModal
                isOpen={returnModalOpen}
@@ -1310,6 +1491,8 @@ export default function OrderPage() {
                onSubmit={handleReturnRequestSubmit}
             />
          )}
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
       </div>
    );
 }

@@ -30,6 +30,7 @@ function OTPContent({ email }: { email: string }) {
    const [error, setError] = useState('');
    const [loading, setLoading] = useState(false);
    const [message, setMessage] = useState('');
+<<<<<<< HEAD
    const [resendLoading, setResendLoading] = useState(false);
    const [resendCooldown, setResendCooldown] = useState(0);
 
@@ -43,6 +44,8 @@ function OTPContent({ email }: { email: string }) {
       }
       return () => clearTimeout(timer);
    }, [resendCooldown]);
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
    const handleVerifyOTP = async () => {
       setLoading(true);
@@ -74,6 +77,7 @@ function OTPContent({ email }: { email: string }) {
       }
    };
 
+<<<<<<< HEAD
    // Add function to resend OTP
    const handleResendOTP = async () => {
       if (resendCooldown > 0) return;
@@ -104,6 +108,8 @@ function OTPContent({ email }: { email: string }) {
       }
    };
 
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
    return (
       <div
          className='min-h-screen w-full bg-cover bg-center bg-no-repeat flex items-center justify-center md:justify-end md:pr-60 p-4'
@@ -112,6 +118,7 @@ function OTPContent({ email }: { email: string }) {
          <div className='bg-white p-6 md:p-8 rounded-lg shadow-md w-full max-w-sm md:max-w-lg'>
             <h2 className='text-2xl font-bold mb-6 text-center text-[#553C26]'>Xác thực OTP</h2>
 
+<<<<<<< HEAD
             {email && (
                <p className='text-gray-600 text-center mb-4'>
                   Mã xác thực đã được gửi đến: <strong>{email}</strong>
@@ -121,6 +128,11 @@ function OTPContent({ email }: { email: string }) {
             {message && <p className='text-green-600 text-center mb-4'>{message}</p>}
             {error && <p className='text-red-600 text-center mb-4'>{error}</p>}
 
+=======
+            {message && <p className='text-green-600 text-center mb-4'>{message}</p>}
+            {error && <p className='text-red-600 text-center mb-4'>{error}</p>}
+
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             <div className='mb-4'>
                <label htmlFor='otp' className='block text-[#553C26] mb-2 text-base font-medium'>
                   Nhập mã xác thực (OTP)
@@ -143,6 +155,7 @@ function OTPContent({ email }: { email: string }) {
                {loading ? 'Đang xác thực...' : 'Xác nhận'}
             </button>
 
+<<<<<<< HEAD
             <div className='mt-3 text-center'>
                <button
                   onClick={handleResendOTP}
@@ -157,6 +170,8 @@ function OTPContent({ email }: { email: string }) {
                </button>
             </div>
 
+=======
+>>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             <div className='flex items-center my-4'>
                <div className='flex-grow border-t border-[#553C26]'></div>
                <div className='mx-2'>
