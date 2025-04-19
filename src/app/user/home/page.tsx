@@ -1,24 +1,37 @@
 'use client';
-import React from 'react';
-
+import React, { Suspense } from 'react'; // Add Suspense import
 import { ChevronRightIcon } from '@heroicons/react/24/outline';
-
 import Image from 'next/image';
+import Link from 'next/link';
 import Carousel from '@/app/components/user/carousel/page';
 import AccessoriesCarousel from '@/app/components/user/accessoriescarousel/page';
 import TrendingCarousel from '@/app/components/user/trendingcarousel/page';
+import RotatingImages from '@/app/components/user/rotatingimages/page';
 import NavBar from '@/app/components/user/nav/page';
 import Footer from '@/app/components/user/footer/page';
+
+// Fallback loading components
+const LoadingSpinner = () => (
+   <div className='flex justify-center items-center p-4'>
+      <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-[#553C26]'></div>
+   </div>
+);
 
 export default function HomePage() {
    return (
       <>
          <div className='bg-[#F1EEE9] min-h-screen'>
-            <NavBar />
+            {/* Wrap NavBar in Suspense in case it's using useSearchParams */}
+            <Suspense fallback={<LoadingSpinner />}>
+               <NavBar />
+            </Suspense>
+
             {/* Hero Section */}
             <div className='flex flex-col lg:flex-row bg-[#F1EEE9] px-4 lg:px-0'>
                <div className='w-full lg:w-auto lg:px-32'>
-                  <Carousel />
+                  <Suspense fallback={<LoadingSpinner />}>
+                     <Carousel />
+                  </Suspense>
                </div>
                <div className='py-8 lg:py-52'>
                   <p className='text-[#553C26] font-mont font-semibold py-4'>What&apos;s new?</p>
@@ -31,10 +44,12 @@ export default function HomePage() {
                   <p className='text-[#553C26] font-mont pb-4'>
                      Tìm kiếm sản phẩm yêu thích trong bộ sưu tập nến thơm đặc biệt của chúng tôi!
                   </p>
+                  <Link href='/user/products'>
                   <button className='font-mont h-8 w-36 bg-[#553C26] text-white rounded-2xl hover:animate-pulse'>
                      Xem thêm
                      <ChevronRightIcon className='h-4 w-5 inline' />
                   </button>
+                  </Link>
                </div>
             </div>
 
@@ -42,7 +57,13 @@ export default function HomePage() {
             <div className='flex items-center justify-center py-1 pb-5 px-4'>
                <div className='flex-grow'></div>
                <div>
-                  <Image src={'/images/logo2.png'} alt='Logo' height={20} width={20} />
+                  <Image
+                     src={'/images/logo2.png'}
+                     alt='Logo'
+                     height={20}
+                     width={20}
+                     style={{ height: 'auto', width: '20px' }}
+                  />
                </div>
                <div className='flex-grow border-t border-[#553C26] w-full lg:w-96'></div>
             </div>
@@ -53,7 +74,9 @@ export default function HomePage() {
                <p className='text-center font-mont font-semibold text-xl lg:text-3xl pb-4'>
                   Những sản phẩm bán chạy
                </p>
-               <TrendingCarousel />
+               <Suspense fallback={<LoadingSpinner />}>
+                  <TrendingCarousel />
+               </Suspense>
 
                {/* Sale Banner */}
                <div className='px-4 lg:px-0 pb-10'>
@@ -63,7 +86,6 @@ export default function HomePage() {
                      height={380}
                      width={1700}
                      className='w-full h-auto object-cover'
-                     priority
                   />
                </div>
             </div>
@@ -83,32 +105,20 @@ export default function HomePage() {
                         đón nhận nhẹ nhàng của bản chất thiên nhiên.
                      </p>
                   </div>
-                  <div className='grid grid-cols-1 md:grid-cols-3 gap-6 w-full lg:w-1/2'>
-                     {[1, 2, 3].map((i) => (
-                        <div key={i} className='flex flex-col items-center'>
-                           <Image
-                              src={'/images/trending.png'}
-                              alt=''
-                              height={290}
-                              width={290}
-                              className='rounded-t-full w-full h-auto max-w-[290px]'
-                           />
-                           <p className='text-white font-mont text-lg text-center mt-2'>
-                              Hương thơm dịu nhẹ
-                           </p>
-                        </div>
-                     ))}
-                  </div>
+                  <Suspense fallback={<LoadingSpinner />}>
+                     <RotatingImages />
+                  </Suspense>
                </div>
             </div>
 
             {/* Accessories Section */}
             <div className='px-4 lg:px-0 py-8'>
-               <p className='text-center text-[#555659] text-lg font-mont'>Phụ kiện</p>
                <p className='text-center font-mont font-semibold text-xl lg:text-3xl pb-4'>
-                  PHỤ KIỆN NẾN
+                  Nến Thơm
                </p>
-               <AccessoriesCarousel />
+               <Suspense fallback={<LoadingSpinner />}>
+                  <AccessoriesCarousel />
+               </Suspense>
             </div>
 
             {/* Text Page and Banner Images */}
@@ -118,9 +128,8 @@ export default function HomePage() {
                      src={'/images/TextPage1.png'}
                      height={555}
                      width={1700}
-                     alt=''
+                     alt='Text page'
                      className='w-full h-auto object-cover'
-                     priority
                   />
                </div>
                <div className='max-w-[1920px] mx-auto'>
@@ -128,9 +137,8 @@ export default function HomePage() {
                      src={'/images/Banner.png'}
                      height={110}
                      width={2500}
-                     alt=''
+                     alt='Banner'
                      className='w-full h-auto object-cover'
-                     priority
                   />
                </div>
             </div>
@@ -176,9 +184,8 @@ export default function HomePage() {
                   src={'/images/image6.png'}
                   height={110}
                   width={2500}
-                  alt=''
+                  alt='Banner image'
                   className='w-full h-auto object-cover'
-                  priority
                />
             </div>
 
@@ -209,7 +216,9 @@ export default function HomePage() {
                   </div>
                </div>
             </div>
-            <Footer />
+            <Suspense fallback={<LoadingSpinner />}>
+               <Footer />
+            </Suspense>
          </div>
       </>
    );
