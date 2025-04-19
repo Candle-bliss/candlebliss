@@ -29,7 +29,6 @@ export default function Step3() {
    const [endDate, setEndDate] = useState('');
    const [variants, setVariants] = useState<Variant[]>(formData.variants || []);
    const [isActive] = useState(true);
-   const [videoUrl, setVideoUrl] = useState(formData.videoUrl || '');
    const [promotion] = useState('');
    const [isLoading, setIsLoading] = useState(false);
    const [calculatedPrice, setCalculatedPrice] = useState('');
@@ -232,8 +231,7 @@ export default function Step3() {
       } catch (error) {
          console.error('Error creating product pricing:', error);
          showToast(
-            `Lỗi khi cài đặt giá sản phẩm: ${
-               error instanceof Error ? error.message : 'Lỗi không xác định'
+            `Lỗi khi cài đặt giá sản phẩm: ${error instanceof Error ? error.message : 'Lỗi không xác định'
             }`,
             'error',
          );
@@ -403,19 +401,7 @@ export default function Step3() {
                         </div>
                      </div>
 
-                     {/* Video URL field */}
-                     <div className='mb-4 flex'>
-                        <label className='block text-sm font-medium mb-1 w-60'>
-                           Video sản phẩm:
-                        </label>
-                        <input
-                           type='text'
-                           className='w-full p-2 border rounded-md'
-                           placeholder='Nhập URL video sản phẩm (YouTube, Vimeo...)'
-                           value={videoUrl}
-                           onChange={(e) => setVideoUrl(e.target.value)}
-                        />
-                     </div>
+
 
                      {/* Product description field */}
                      <div className='mb-4 flex'>
@@ -452,9 +438,8 @@ export default function Step3() {
                                     </div>
                                     <svg
                                        xmlns='http://www.w3.org/2000/svg'
-                                       className={`h-5 w-5 transform transition-transform ${
-                                          variant.isExpanded ? 'rotate-180' : ''
-                                       }`}
+                                       className={`h-5 w-5 transform transition-transform ${variant.isExpanded ? 'rotate-180' : ''
+                                          }`}
                                        fill='none'
                                        viewBox='0 0 24 24'
                                        stroke='currentColor'
@@ -529,9 +514,8 @@ export default function Step3() {
                                                    <Image
                                                       key={imgIndex}
                                                       src={img}
-                                                      alt={`Variant ${index + 1} image ${
-                                                         imgIndex + 1
-                                                      }`}
+                                                      alt={`Variant ${index + 1} image ${imgIndex + 1
+                                                         }`}
                                                       className='w-20 h-20 object-cover rounded border'
                                                       width={80}
                                                       height={80}
@@ -593,6 +577,38 @@ export default function Step3() {
                               placeholder='Nhập % khuyến mãi (nếu có)'
                            />
                            <p className='text-xs text-gray-500 mt-1'>% giảm giá so với giá gốc</p>
+                        </div>
+
+                        {/* Ngày bắt đầu khuyến mãi */}
+                        <div className='mb-4'>
+                           <label className='block text-sm font-medium mb-1'>
+                              Ngày bắt đầu<span className='text-red-500'>*</span>
+                           </label>
+                           <input
+                              type='date'
+                              className='w-full p-2 border rounded-md'
+                              value={startDate}
+                              onChange={(e) => setStartDate(e.target.value)}
+                              min={new Date().toISOString().split('T')[0]}
+                              required
+                           />
+                           <p className='text-xs text-gray-500 mt-1'>Ngày áp dụng giá mới</p>
+                        </div>
+
+                        {/* Ngày kết thúc khuyến mãi */}
+                        <div className='mb-4'>
+                           <label className='block text-sm font-medium mb-1'>
+                              Ngày kết thúc<span className='text-red-500'>*</span>
+                           </label>
+                           <input
+                              type='date'
+                              className='w-full p-2 border rounded-md'
+                              value={endDate}
+                              onChange={(e) => setEndDate(e.target.value)}
+                              min={startDate || new Date().toISOString().split('T')[0]}
+                              required
+                           />
+                           <p className='text-xs text-gray-500 mt-1'>Ngày kết thúc áp dụng giá này</p>
                         </div>
                      </div>
 

@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import React from 'react';
 
@@ -12,7 +12,6 @@ import {
    ShoppingBag,
    CreditCard,
    Settings,
-   Users,
    ChevronDown,
    ChevronUp,
    Globe, // Import Globe icon for store/client navigation
@@ -30,7 +29,6 @@ export default function MenuSideBar() {
       localStorage.removeItem('userData');
       window.location.href = '/seller/signin';
    };
-
 
    return (
       <div className='min-h-screen  flex'>
@@ -53,7 +51,7 @@ export default function MenuSideBar() {
                   <Link
                      href='/user/home'
                      className='flex items-center p-2 text-emerald-600 hover:bg-emerald-50 rounded border border-emerald-200 transition-colors'
-                     rel="noopener noreferrer"
+                     rel='noopener noreferrer'
                   >
                      <Globe size={18} className='mr-2' />
                      <span>Xem Cửa Hàng</span>
@@ -93,7 +91,7 @@ export default function MenuSideBar() {
                            href='/products/gift-sets'
                            className='flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded'
                         >
-                           <span className='text-sm'>Tạo set quà</span>
+                           <span className='text-sm'>Set quà</span>
                         </Link>
                         <Link
                            href='/seller/vouchers'
@@ -101,31 +99,38 @@ export default function MenuSideBar() {
                         >
                            <span className='text-sm'>Khuyến Mãi</span>
                         </Link>
-                        <Link
-                           href='/products/price-list'
-                           className='flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded'
-                        >
-                           <span className='text-sm'>Bảng giá</span>
-                        </Link>
+
                      </div>
                   )}
                </div>
                <div className='px-4 py-2'>
                   <Link
-                     href='/orders'
+                     href='/seller/orders'
                      className='flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded'
                   >
-                     <ShoppingBag size={18} className='mr-2' />
+                     <Package size={18} className='mr-2' />
                      <span>Quản Lý Đơn Hàng</span>
+                  </Link>
+               </div>
+
+
+
+               <div className='px-4 py-2'>
+                  <Link
+                     href='/seller/warehouse'
+                     className='flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded'
+                  >
+                     <Package size={18} className='mr-2' />
+                     <span>Quản lý kho </span>
                   </Link>
                </div>
                <div className='px-4 py-2'>
                   <Link
-                     href='/payments'
+                     href='/seller/exchange'
                      className='flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded'
                   >
                      <CreditCard size={18} className='mr-2' />
-                     <span>Quản Lý Đối trả</span>
+                     <span>Quản Lý Đổi trả</span>
                   </Link>
                </div>
                <div className='px-4 py-2'>
@@ -139,13 +144,14 @@ export default function MenuSideBar() {
                </div>
                <div className='px-4 py-2'>
                   <Link
-                     href='/permissions'
+                     href='/seller/reviews'
                      className='flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded'
                   >
-                     <Users size={18} className='mr-2' />
-                     <span>Phân Quyền</span>
+                     <ShoppingBag size={18} className='mr-2' />
+                     <span>Xem đánh giá sản phẩm</span>
                   </Link>
                </div>
+
                <div className='px-4 py-2'>
                   <Link
                      href='/settings'
