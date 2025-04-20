@@ -14,17 +14,10 @@ import {
 } from 'react-icons/fi';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-<<<<<<< HEAD
 import Toast from '@/app/components/ui/toast/Toast';
 
 export default function CreateVoucher() {
    const router = useRouter();
-=======
-
-export default function CreateVoucher() {
-   const router = useRouter();
-   // Update your initial voucherData state
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
    const [voucherData, setVoucherData] = useState({
       code: '',
@@ -44,7 +37,6 @@ export default function CreateVoucher() {
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-<<<<<<< HEAD
    // Toast state
    const [toast, setToast] = useState({
       show: false,
@@ -66,8 +58,6 @@ export default function CreateVoucher() {
       setToast(prev => ({ ...prev, show: false }));
    };
 
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
    // Format date để hiển thị
    const formatDate = (dateString: string | number | Date) => {
       if (!dateString) return '';
@@ -101,7 +91,6 @@ export default function CreateVoucher() {
       // Date validation
       if (!voucherData.startDate) {
          newErrors.startDate = 'Vui lòng chọn ngày bắt đầu';
-<<<<<<< HEAD
       } else {
          // Check if start date is not in the past
          const today = new Date();
@@ -112,9 +101,6 @@ export default function CreateVoucher() {
          }
       }
 
-=======
-      }
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
       if (!voucherData.endDate) {
          newErrors.endDate = 'Vui lòng chọn ngày kết thúc';
       }
@@ -168,21 +154,13 @@ export default function CreateVoucher() {
          // Get authentication token
          const token = localStorage.getItem('token') || sessionStorage.getItem('token');
          if (!token) {
-<<<<<<< HEAD
             showToast('Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn', 'error');
-=======
-            alert('Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn');
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             router.push('/seller/signin');
             setIsSubmitting(false);
             return;
          }
 
          // Complete payload with all fields matching database schema
-<<<<<<< HEAD
-=======
-
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          const voucherPayload = {
             code: voucherData.code,
             description:
@@ -237,7 +215,6 @@ export default function CreateVoucher() {
                try {
                   // Try to parse JSON error response
                   const errorData = JSON.parse(responseText);
-<<<<<<< HEAD
 
                   // Check specifically for the exact error code
                   if (errorData.message === 'voucherCodeAlreadyExists' ||
@@ -303,13 +280,6 @@ export default function CreateVoucher() {
                   } else {
                      showToast(errorMessage, 'error');
                   }
-=======
-                  errorMessage =
-                     errorData.message || errorData.error || 'Lỗi không xác định từ server';
-               } catch {
-                  // If it's not valid JSON, use the raw text
-                  errorMessage = `Lỗi server: ${responseText.substring(0, 100)}...`;
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                }
 
                throw new Error(errorMessage);
@@ -325,7 +295,6 @@ export default function CreateVoucher() {
             }
 
             console.log('Voucher created successfully:', result);
-<<<<<<< HEAD
             showToast('Đã tạo mã giảm giá thành công!', 'success');
 
             // Give toast a moment to show before navigating away
@@ -338,32 +307,15 @@ export default function CreateVoucher() {
             showToast(
                `Lỗi khi tạo mã giảm giá: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`,
                'error'
-=======
-            alert('Đã tạo mã giảm giá thành công!');
-            router.push('/seller/vouchers');
-         } catch (error) {
-            console.error('Error creating voucher:', error);
-            alert(
-               `Lỗi khi tạo mã giảm giá: ${
-                  error instanceof Error ? error.message : 'Lỗi không xác định'
-               }`,
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             );
          } finally {
             setIsSubmitting(false);
          }
       } catch (error) {
          console.error('Error creating voucher:', error);
-<<<<<<< HEAD
          showToast(
             `Lỗi khi tạo mã giảm giá: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`,
             'error'
-=======
-         alert(
-            `Lỗi khi tạo mã giảm giá: ${
-               error instanceof Error ? error.message : 'Lỗi không xác định'
-            }`,
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          );
       } finally {
          setIsSubmitting(false);
@@ -376,7 +328,6 @@ export default function CreateVoucher() {
             <title>Tạo mã giảm giá mới - Candle Bliss</title>
          </Head>
 
-<<<<<<< HEAD
          {/* Toast component */}
          <Toast
             show={toast.show}
@@ -387,8 +338,6 @@ export default function CreateVoucher() {
             duration={5000}
          />
 
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          {/* Sidebar cố định bên trái */}
          <div className='fixed left-0 top-0 h-full z-30'>
             <MenuSideBar />
@@ -433,14 +382,8 @@ export default function CreateVoucher() {
                                  <input
                                     type='text'
                                     name='code'
-<<<<<<< HEAD
                                     className={`w-full p-2 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-300 transition ${errors.code ? 'border-red-500 ring-1 ring-red-500' : ''
                                        }`}
-=======
-                                    className={`w-full p-2 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-300 transition ${
-                                       errors.code ? 'border-red-500 ring-1 ring-red-500' : ''
-                                    }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                     placeholder='SUMMER2025'
                                     value={voucherData.code}
                                     onChange={handleChange}
@@ -464,14 +407,8 @@ export default function CreateVoucher() {
                               <input
                                  type='date'
                                  name='startDate'
-<<<<<<< HEAD
                                  className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-300 transition ${errors.startDate ? 'border-red-500 ring-1 ring-red-500' : ''
                                     }`}
-=======
-                                 className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-300 transition ${
-                                    errors.startDate ? 'border-red-500 ring-1 ring-red-500' : ''
-                                 }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                  value={voucherData.startDate}
                                  onChange={handleChange}
                                  required
@@ -489,14 +426,8 @@ export default function CreateVoucher() {
                               <input
                                  type='date'
                                  name='endDate'
-<<<<<<< HEAD
                                  className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-300 transition ${errors.endDate ? 'border-red-500 ring-1 ring-red-500' : ''
                                     }`}
-=======
-                                 className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-300 transition ${
-                                    errors.endDate ? 'border-red-500 ring-1 ring-red-500' : ''
-                                 }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                  value={voucherData.endDate}
                                  onChange={handleChange}
                                  required
@@ -520,18 +451,10 @@ export default function CreateVoucher() {
                               <input
                                  type='number'
                                  name='discountPercent'
-<<<<<<< HEAD
                                  className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-300 transition ${errors.discountPercent
                                     ? 'border-red-500 ring-1 ring-red-500'
                                     : ''
                                     }`}
-=======
-                                 className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-300 transition ${
-                                    errors.discountPercent
-                                       ? 'border-red-500 ring-1 ring-red-500'
-                                       : ''
-                                 }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                  placeholder='10'
                                  min='0'
                                  max='100'
@@ -679,14 +602,8 @@ export default function CreateVoucher() {
                            <button
                               type='submit'
                               disabled={isSubmitting}
-<<<<<<< HEAD
                               className={`px-5 py-2 text-sm text-white bg-amber-600 rounded-md hover:bg-amber-700 transition focus:outline-none focus:ring-2 focus:ring-amber-500 flex items-center ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
                                  }`}
-=======
-                              className={`px-5 py-2 text-sm text-white bg-amber-600 rounded-md hover:bg-amber-700 transition focus:outline-none focus:ring-2 focus:ring-amber-500 flex items-center ${
-                                 isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
-                              }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                            >
                               {isSubmitting ? (
                                  <>
@@ -740,13 +657,8 @@ export default function CreateVoucher() {
                                  <div className='flex justify-between mb-2'>
                                     <div className='text-sm font-semibold'>
                                        Mã Voucher:{' '}
-<<<<<<< HEAD
                                        <span className={`font-bold ${voucherData.code ? 'text-amber-600' : 'text-gray-400 italic'}`}>
                                           {voucherData.code || 'Chưa có mã giảm giá'}
-=======
-                                       <span className='font-bold text-amber-600'>
-                                          {voucherData.code || 'VOUCHER'}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                        </span>
                                     </div>
                                     <div className='bg-amber-50 p-1.5 rounded-full'>
@@ -828,13 +740,8 @@ export default function CreateVoucher() {
                                  <span className='ml-1'>
                                     {voucherData.minPrice
                                        ? `${Number(voucherData.minPrice).toLocaleString(
-<<<<<<< HEAD
                                           'vi-VN',
                                        )} VNĐ`
-=======
-                                            'vi-VN',
-                                         )} VNĐ`
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                        : '...'}
                                  </span>
                               </div>
@@ -844,13 +751,8 @@ export default function CreateVoucher() {
                                  <span className='ml-1'>
                                     {voucherData.startDate
                                        ? `${formatDate(voucherData.startDate)} - ${formatDate(
-<<<<<<< HEAD
                                           voucherData.endDate || new Date(),
                                        )}`
-=======
-                                            voucherData.endDate || new Date(),
-                                         )}`
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                        : '...'}
                                  </span>
                               </div>
@@ -868,17 +770,10 @@ export default function CreateVoucher() {
                                     {voucherData.applyTo === 'all'
                                        ? 'Tất cả sản phẩm'
                                        : voucherData.applyTo === 'product'
-<<<<<<< HEAD
                                           ? 'Sản phẩm cụ thể'
                                           : voucherData.applyTo === 'category'
                                              ? 'Danh mục sản phẩm'
                                              : '...'}
-=======
-                                       ? 'Sản phẩm cụ thể'
-                                       : voucherData.applyTo === 'category'
-                                       ? 'Danh mục sản phẩm'
-                                       : '...'}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                  </span>
                               </div>
                            </div>

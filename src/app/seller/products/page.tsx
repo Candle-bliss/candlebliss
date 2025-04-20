@@ -160,6 +160,7 @@ const ProductTable = ({
    handleEditProduct,
    handleDeleteProduct,
    getCategoryNameById,
+   showToast, // Đảm bảo thêm tham số này vào định nghĩa
 }: {
    products: ProductViewModel[];
    loading: boolean;
@@ -167,7 +168,7 @@ const ProductTable = ({
    handleEditProduct: (productId: number) => void;
    handleDeleteProduct: (productId: number) => void;
    getCategoryNameById: (categoryId: number | undefined) => Promise<string>;
-   showToast: (message: string, type: 'success' | 'error' | 'info') => void;
+   showToast: (message: string, type: 'success' | 'error' | 'info') => void; // Đảm bảo có dòng này
 }) => {
    const [expandedProduct, setExpandedProduct] = useState<number | null>(null);
    const [detailPrices, setDetailPrices] = useState<
@@ -185,27 +186,122 @@ const ProductTable = ({
    const [categoryNames, setCategoryNames] = useState<Record<number, string>>({});
    const router = useRouter();
 
-<<<<<<< HEAD
    // Add new state to track which detail images are being viewed
    const [detailImagesModal, setDetailImagesModal] = useState<{
       detailId: number;
       images: Image[];
       currentImageIndex: number;
+      isLoading?: boolean;
    } | null>(null);
 
-   // Add this function to show detail images
-   const showDetailImages = (detailId: number, images: Image[]) => {
-      if (images && images.length > 0) {
+   // 1. Thêm state để lưu cache hình ảnh
+   const [detailImagesCache, setDetailImagesCache] = useState<Record<number, Image[]>>({});
+
+   // Add function to fetch detail images directly from API
+   const fetchDetailImages = async (detailId: number) => {
+      console.log('Fetching images for detail ID:', detailId);
+      try {
+         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+         if (!token) {
+            console.log('No token found');
+            return null;
+         }
+
          setDetailImagesModal({
             detailId,
-            images,
-            currentImageIndex: 0
+            images: [],
+            currentImageIndex: 0,
+            isLoading: true
          });
+
+         console.log('Making API request to:', `http://68.183.226.198:3000/api/product-details/${detailId}`);
+
+         const response = await fetch(
+            `http://68.183.226.198:3000/api/product-details/${detailId}`,
+            {
+               headers: {
+                  Authorization: `Bearer ${token}`,
+               },
+            }
+         );
+
+         console.log('API response status:', response.status);
+
+         if (!response.ok) {
+            throw new Error(`Failed to fetch detail images: ${response.status}`);
+         }
+
+         const detailData = await response.json();
+         console.log('Received detail data:', detailData);
+
+         if (detailData && detailData.images && detailData.images.length > 0) {
+            console.log('Found images:', detailData.images.length);
+            setDetailImagesModal({
+               detailId,
+               images: detailData.images,
+               currentImageIndex: 0,
+               isLoading: false
+            });
+         } else {
+            console.log('No images found in detail data');
+            showToast('Không tìm thấy hình ảnh cho phiên bản này', 'info');
+            setDetailImagesModal(null);
+         }
+      } catch (error) {
+         console.error('Error fetching detail images:', error);
+         showToast('Không thể tải hình ảnh phiên bản', 'error');
+         setDetailImagesModal(null);
       }
    };
 
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
+   // 2. Thêm hàm preload hình ảnh
+   const preloadDetailImages = async (detailId: number) => {
+      // Bỏ qua nếu đã có trong cache
+      if (detailImagesCache[detailId]?.length > 0) return;
+
+      console.log('Preloading images for detail ID:', detailId);
+
+      try {
+         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+         if (!token) return;
+
+         const response = await fetch(
+            `http://68.183.226.198:3000/api/product-details/${detailId}`,
+            {
+               headers: {
+                  Authorization: `Bearer ${token}`,
+               },
+            }
+         );
+
+         if (!response.ok) {
+            console.error(`Failed to fetch detail images for ID ${detailId}: ${response.status}`);
+            return;
+         }
+
+         const detailData = await response.json();
+         console.log('Preloaded detail data:', detailData);
+
+         if (detailData && detailData.images && detailData.images.length > 0) {
+            console.log(`Found ${detailData.images.length} images for detail ID ${detailId}`);
+            // Cập nhật cache với hình ảnh vừa tải
+            setDetailImagesCache(prev => ({
+               ...prev,
+               [detailId]: detailData.images
+            }));
+         } else {
+            console.log(`No images found for detail ID ${detailId}`);
+         }
+      } catch (error) {
+         console.error('Error preloading detail images:', error);
+      }
+   };
+
+   // Update the showDetailImages function to use the API
+   const showDetailImages = (detailId: number) => {
+      fetchDetailImages(detailId);
+   };
+
    // Filter products based on search term
    const filteredProducts = useMemo(() => {
       if (!searchTerm.trim()) return products;
@@ -374,6 +470,22 @@ const ProductTable = ({
       }
    };
 
+   // 3. Sửa useEffect khi mở rộng sản phẩm
+   useEffect(() => {
+      if (expandedProduct !== null) {
+         // Tải giá sản phẩm
+         fetchProductDetailPrices(expandedProduct);
+
+         // Tải hình ảnh cho tất cả chi tiết sản phẩm
+         const product = products.find(p => p.id === expandedProduct);
+         if (product && product.details) {
+            product.details.forEach(detail => {
+               preloadDetailImages(detail.id);
+            });
+         }
+      }
+   }, [expandedProduct, products]);
+
    return (
       <div className='bg-white rounded-lg shadow overflow-hidden'>
          {/* Table Header with search and actions */}
@@ -428,7 +540,6 @@ const ProductTable = ({
 
                <div className='flex items-center space-x-2'>
                   <button
-<<<<<<< HEAD
                      onClick={() => router.push('/seller/categories')}
                      className='inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 shadow-sm'
                   >
@@ -436,8 +547,6 @@ const ProductTable = ({
                      Thêm danh mục
                   </button>
                   <button
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                      onClick={() => router.push('/seller/products/createproduct/step1')}
                      className='inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 shadow-sm'
                   >
@@ -600,13 +709,8 @@ const ProductTable = ({
                                              ? `${categoryNames[product.category_id]} `
                                              : `Đang tải... (ID: ${product.category_id})`
                                           : product.categories && product.categories.length > 0
-<<<<<<< HEAD
                                              ? `${product.categories[0].name} `
                                              : 'Chưa có danh mục'}
-=======
-                                          ? `${product.categories[0].name} `
-                                          : 'Chưa có danh mục'}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                     </p>
                                  </div>
                               </div>
@@ -630,33 +734,18 @@ const ProductTable = ({
 
                            <div className='hidden md:flex items-center'>
                               <span
-<<<<<<< HEAD
                                  className={`px-2.5 py-1 text-xs rounded-full ${activeVariants > 0
                                     ? 'bg-green-100 text-green-800'
                                     : totalVariants === 0
                                        ? 'bg-gray-100 text-gray-800'
                                        : 'bg-yellow-100 text-yellow-800'
                                     }`}
-=======
-                                 className={`px-2.5 py-1 text-xs rounded-full ${
-                                    activeVariants > 0
-                                       ? 'bg-green-100 text-green-800'
-                                       : totalVariants === 0
-                                       ? 'bg-gray-100 text-gray-800'
-                                       : 'bg-yellow-100 text-yellow-800'
-                                 }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                               >
                                  {activeVariants > 0
                                     ? 'Đang kinh doanh'
                                     : totalVariants === 0
-<<<<<<< HEAD
                                        ? 'Chưa có phiên bản'
                                        : 'Chưa kinh doanh'}
-=======
-                                    ? 'Chưa có phiên bản'
-                                    : 'Chưa kinh doanh'}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                               </span>
                            </div>
 
@@ -691,33 +780,18 @@ const ProductTable = ({
                               </div>
                               <div className='text-right'>
                                  <span
-<<<<<<< HEAD
                                     className={`text-xs font-medium px-2 py-0.5 rounded-full ${activeVariants > 0
                                        ? 'bg-green-100 text-green-800'
                                        : totalVariants === 0
                                           ? 'bg-gray-100 text-gray-800'
                                           : 'bg-yellow-100 text-yellow-800'
                                        }`}
-=======
-                                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                                       activeVariants > 0
-                                          ? 'bg-green-100 text-green-800'
-                                          : totalVariants === 0
-                                          ? 'bg-gray-100 text-gray-800'
-                                          : 'bg-yellow-100 text-yellow-800'
-                                    }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                  >
                                     {activeVariants > 0
                                        ? 'Đang kinh doanh'
                                        : totalVariants === 0
-<<<<<<< HEAD
                                           ? 'Chưa có phiên bản'
                                           : 'Chưa kinh doanh'}
-=======
-                                       ? 'Chưa có phiên bản'
-                                       : 'Chưa kinh doanh'}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                  </span>
                               </div>
                               <div className='col-span-2 text-xs text-gray-500 mt-1'>
@@ -725,17 +799,10 @@ const ProductTable = ({
                                  <span className='text-gray-700'>
                                     {product.category_id
                                        ? categoryNames[product.category_id] ||
-<<<<<<< HEAD
                                        `Đang tải... (ID: ${product.category_id})`
                                        : product.categories && product.categories.length > 0
                                           ? `${product.categories[0].name} (ID: ${product.categories[0].id})`
                                           : 'Chưa có danh mục'}
-=======
-                                         `Đang tải... (ID: ${product.category_id})`
-                                       : product.categories && product.categories.length > 0
-                                       ? `${product.categories[0].name} (ID: ${product.categories[0].id})`
-                                       : 'Chưa có danh mục'}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                  </span>
                               </div>
                            </div>
@@ -810,16 +877,15 @@ const ProductTable = ({
                                                    {/* Các cột khác giữ nguyên */}
                                                    <td className='px-6 py-4 whitespace-nowrap'>
                                                       <div className='flex items-center'>
-<<<<<<< HEAD
                                                          <button
-                                                            onClick={() => detail.images?.length > 0 && showDetailImages(detail.id, detail.images)}
+                                                            onClick={() => showDetailImages(detail.id)}
                                                             className='h-10 w-10 flex-shrink-0 mr-3 border rounded-md overflow-hidden hover:opacity-80 transition-opacity'
-                                                            disabled={!detail.images || detail.images.length === 0}
                                                          >
-                                                            {detail.images && detail.images.length > 0 ? (
+                                                            {detailImagesCache[detail.id]?.length > 0 ? (
+                                                               // Sử dụng hình ảnh từ cache nếu có
                                                                <div className='relative h-full w-full'>
                                                                   <Image
-                                                                     src={detail.images[0].path}
+                                                                     src={detailImagesCache[detail.id][0].path}
                                                                      alt={`${product.name} - ${detail.size || ''} ${detail.type || ''}`}
                                                                      width={40}
                                                                      height={40}
@@ -829,23 +895,31 @@ const ProductTable = ({
                                                                         target.src = '/placeholder.png';
                                                                      }}
                                                                   />
-                                                                  {detail.images.length > 1 && (
+                                                                  {detailImagesCache[detail.id].length > 1 && (
                                                                      <div className='absolute bottom-0 right-0 bg-black bg-opacity-50 text-white text-xs rounded-tl-sm px-1'>
-                                                                        +{detail.images.length - 1}
+                                                                        +{detailImagesCache[detail.id].length - 1}
                                                                      </div>
                                                                   )}
                                                                </div>
                                                             ) : (
                                                                <div className='flex items-center justify-center h-full w-full text-gray-400 bg-gray-100'>
-                                                                  <PlusIcon className='h-5 w-5' />
+                                                                  <svg
+                                                                     xmlns="http://www.w3.org/2000/svg"
+                                                                     className="h-5 w-5"
+                                                                     fill="none"
+                                                                     viewBox="0 0 24 24"
+                                                                     stroke="currentColor"
+                                                                  >
+                                                                     <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth={1.5}
+                                                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                                                     />
+                                                                  </svg>
                                                                </div>
                                                             )}
                                                          </button>
-=======
-                                                         <div className='h-10 w-10 flex-shrink-0 mr-3 border rounded-full overflow-hidden'>
-                                                            {/* Nội dung cũ */}
-                                                         </div>
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                                          <span className='text-gray-900 text-sm'>
                                                             #{detail.id}
                                                          </span>
@@ -862,18 +936,10 @@ const ProductTable = ({
                                                    </td>
                                                    <td className='px-6 py-4 whitespace-nowrap text-sm'>
                                                       <span
-<<<<<<< HEAD
                                                          className={`font-medium ${detail.quantities === 0
                                                             ? 'text-red-500'
                                                             : 'text-gray-700'
                                                             }`}
-=======
-                                                         className={`font-medium ${
-                                                            detail.quantities === 0
-                                                               ? 'text-red-500'
-                                                               : 'text-gray-700'
-                                                         }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                                       >
                                                          {detail.quantities}
                                                       </span>
@@ -887,11 +953,7 @@ const ProductTable = ({
                                                       {priceInfo.base_price ? (
                                                          <div>
                                                             {effectiveDiscountPrice &&
-<<<<<<< HEAD
                                                                effectiveDiscountPrice > 0 ? (
-=======
-                                                            effectiveDiscountPrice > 0 ? (
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                                                <>
                                                                   {/* Hiển thị giá sau khi giảm */}
                                                                   <div className='flex items-center'>
@@ -956,18 +1018,10 @@ const ProductTable = ({
 
                                                    <td className='px-6 py-4 whitespace-nowrap'>
                                                       <span
-<<<<<<< HEAD
                                                          className={`px-2 py-1 text-xs rounded-full ${detail.isActive
                                                             ? 'bg-green-100 text-green-800'
                                                             : 'bg-gray-100 text-gray-800'
                                                             }`}
-=======
-                                                         className={`px-2 py-1 text-xs rounded-full ${
-                                                            detail.isActive
-                                                               ? 'bg-green-100 text-green-800'
-                                                               : 'bg-gray-100 text-gray-800'
-                                                         }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                                       >
                                                          {detail.isActive
                                                             ? 'Đang bán'
@@ -995,7 +1049,6 @@ const ProductTable = ({
                })}
             </div>
          )}
-<<<<<<< HEAD
          {/* Modal for viewing product detail images */}
          {detailImagesModal && (
             <div className='fixed inset-0 bg-black/70 flex items-center justify-center z-50'>
@@ -1020,50 +1073,59 @@ const ProductTable = ({
                   </div>
 
                   <div className='flex flex-col items-center'>
-                     {/* Main image */}
-                     <div className='relative w-full h-64 md:h-96 mb-4 bg-gray-100 rounded-lg overflow-hidden'>
-                        <Image
-                           src={detailImagesModal.images[detailImagesModal.currentImageIndex].path}
-                           alt={`Product detail image`}
-                           fill
-                           className='object-contain'
-                           onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.src = '/placeholder.png';
-                           }}
-                        />
-                     </div>
-
-                     {/* Thumbnails */}
-                     {detailImagesModal.images.length > 1 && (
-                        <div className='flex space-x-2 overflow-x-auto max-w-full py-2'>
-                           {detailImagesModal.images.map((image, index) => (
-                              <button
-                                 key={image.id}
-                                 onClick={() => setDetailImagesModal({
-                                    ...detailImagesModal,
-                                    currentImageIndex: index
-                                 })}
-                                 className={`h-16 w-16 flex-shrink-0 rounded border-2 ${detailImagesModal.currentImageIndex === index
-                                       ? 'border-amber-600'
-                                       : 'border-transparent hover:border-gray-300'
-                                    }`}
-                              >
-                                 <div className='relative h-full w-full'>
-                                    <Image
-                                       src={image.path}
-                                       alt={`Thumbnail ${index + 1}`}
-                                       fill
-                                       className='object-cover rounded'
-                                       onError={(e) => {
-                                          const target = e.target as HTMLImageElement;
-                                          target.src = '/placeholder.png';
-                                       }}
-                                    />
-                                 </div>
-                              </button>
-                           ))}
+                     {detailImagesModal.isLoading ? (
+                        <div className='py-20 flex flex-col items-center justify-center'>
+                           <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-amber-700 mb-4'></div>
+                           <p className='text-gray-500'>Đang tải hình ảnh...</p>
                         </div>
+                     ) : (
+                        <>
+                           {/* Main image */}
+                           <div className='relative w-full h-64 md:h-96 mb-4 bg-gray-100 rounded-lg overflow-hidden'>
+                              <Image
+                                 src={detailImagesModal.images[detailImagesModal.currentImageIndex].path}
+                                 alt={`Product detail image`}
+                                 fill
+                                 className='object-contain'
+                                 onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = '/placeholder.png';
+                                 }}
+                              />
+                           </div>
+
+                           {/* Thumbnails */}
+                           {detailImagesModal.images.length > 1 && (
+                              <div className='flex space-x-2 overflow-x-auto max-w-full py-2'>
+                                 {detailImagesModal.images.map((image, index) => (
+                                    <button
+                                       key={image.id}
+                                       onClick={() => setDetailImagesModal({
+                                          ...detailImagesModal,
+                                          currentImageIndex: index
+                                       })}
+                                       className={`h-16 w-16 flex-shrink-0 rounded border-2 ${detailImagesModal.currentImageIndex === index
+                                          ? 'border-amber-600'
+                                          : 'border-transparent hover:border-gray-300'
+                                          }`}
+                                    >
+                                       <div className='relative h-full w-full'>
+                                          <Image
+                                             src={image.path}
+                                             alt={`Thumbnail ${index + 1}`}
+                                             fill
+                                             className='object-cover rounded'
+                                             onError={(e) => {
+                                                const target = e.target as HTMLImageElement;
+                                                target.src = '/placeholder.png';
+                                             }}
+                                          />
+                                       </div>
+                                    </button>
+                                 ))}
+                              </div>
+                           )}
+                        </>
                      )}
                   </div>
 
@@ -1078,8 +1140,6 @@ const ProductTable = ({
                </div>
             </div>
          )}
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
       </div>
    );
 };
@@ -1177,13 +1237,8 @@ export default function ProductManagement() {
                      images: Array.isArray(product.images)
                         ? product.images
                         : product.images
-<<<<<<< HEAD
                            ? [product.images]
                            : [],
-=======
-                        ? [product.images]
-                        : [],
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                      details: [],
                      pricing: [],
                      categories: product.categories || [],
@@ -1198,13 +1253,8 @@ export default function ProductManagement() {
                   images: Array.isArray(detailData.images)
                      ? detailData.images
                      : detailData.images
-<<<<<<< HEAD
                         ? [detailData.images]
                         : [],
-=======
-                     ? [detailData.images]
-                     : [],
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                   details: detailData.details || [],
                   pricing: [], // We'll fetch pricing separately
                   categories: detailData.categories || [],
@@ -1215,13 +1265,8 @@ export default function ProductManagement() {
                   images: Array.isArray(product.images)
                      ? product.images
                      : product.images
-<<<<<<< HEAD
                         ? [product.images]
                         : [],
-=======
-                     ? [product.images]
-                     : [],
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                   details: [],
                   pricing: [],
                   categories: product.categories || [],
@@ -1441,11 +1486,7 @@ export default function ProductManagement() {
                // Check if any product pricing has an active discount
                return product.pricing?.some((price) => {
                   // Check if there's a discount price
-<<<<<<< HEAD
                   const hasDiscount = price.discount_price && price.discount_price > 0;
-=======
-                  const hasDiscount = price.discount_price > 0;
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
                   // Check if the promotion is still active (not expired)
                   const isActive = isPromotionActive(price.end_date);
@@ -1477,11 +1518,7 @@ export default function ProductManagement() {
          'Hoạt động': products.filter((p) => p.details?.some((d) => d.isActive)).length,
          'Khuyến Mãi': products.filter((p) =>
             p.pricing?.some(
-<<<<<<< HEAD
                (price) => price.discount_price && price.discount_price > 0 && isPromotionActive(price.end_date),
-=======
-               (price) => price.discount_price > 0 && isPromotionActive(price.end_date),
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             ),
          ).length,
          'Hết hàng': products.filter((p) => {
@@ -1513,34 +1550,18 @@ export default function ProductManagement() {
                            <button
                               key={tab.id}
                               onClick={() => setActiveTab(tab.id)}
-<<<<<<< HEAD
                               className={`py-2 px-4 border-b-2 font-medium text-sm flex items-center mr-6 ${activeTab === tab.id
                                  ? 'border-amber-500 text-amber-600'
                                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                  }`}
-=======
-                              className={`py-2 px-4 border-b-2 font-medium text-sm flex items-center mr-6 ${
-                                 activeTab === tab.id
-                                    ? 'border-amber-500 text-amber-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                              }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                            >
                               {tab.label}
                               {!loading && (
                                  <span
-<<<<<<< HEAD
                                     className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${activeTab === tab.id
                                        ? 'bg-amber-100 text-amber-800'
                                        : 'bg-gray-100 text-gray-600'
                                        }`}
-=======
-                                    className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${
-                                       activeTab === tab.id
-                                          ? 'bg-amber-100 text-amber-800'
-                                          : 'bg-gray-100 text-gray-600'
-                                    }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                  >
                                     {tabCounts[tab.id]}
                                  </span>
@@ -1681,3 +1702,5 @@ export default function ProductManagement() {
       </div>
    );
 }
+
+

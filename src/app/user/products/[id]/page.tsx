@@ -32,10 +32,7 @@ interface Product {
    video: string;
    images: ProductImage[] | ProductImage;
    details?: ProductDetail[];
-<<<<<<< HEAD
    ratings?: ProductRating[];  // Thêm trường ratings nếu API trả về
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 }
 
 interface CartItem {
@@ -51,7 +48,6 @@ interface CartItem {
       value: string;
    }[];
 }
-<<<<<<< HEAD
 interface ProductRating {
    id: number;
    product_id: number;
@@ -62,8 +58,6 @@ interface ProductRating {
    comment: string;    // Nội dung đánh giá
    created_at: string; // Ngày đánh giá
 }
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
 const formatPrice = (price: number): string => {
    return new Intl.NumberFormat('vi-VN', {
@@ -78,7 +72,6 @@ const calculateDiscountedPrice = (basePrice: number, discountPercentage: number 
    return basePrice - basePrice * (discountPercentage / 100);
 };
 
-<<<<<<< HEAD
 // Thêm component hiển thị sao
 const StarDisplay = ({ rating }: { rating: number }) => {
    return (
@@ -100,8 +93,6 @@ const StarDisplay = ({ rating }: { rating: number }) => {
    );
 };
 
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 export default function ProductDetailPage() {
    const params = useParams();
    const router = useRouter();
@@ -129,11 +120,8 @@ export default function ProductDetailPage() {
    >({});
    const [selectedDetailId, setSelectedDetailId] = useState<number | null>(null);
    const [showCartNotification, setShowCartNotification] = useState(false);
-<<<<<<< HEAD
    const [productRatings, setProductRatings] = useState<ProductRating[]>([]);
    const [loadingRatings, setLoadingRatings] = useState(false);
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
    const selectedDetail = selectedDetailId
       ? productDetails.find((detail) => detail.id === selectedDetailId)
@@ -223,7 +211,6 @@ export default function ProductDetailPage() {
       try {
          console.log('Đang xử lý dữ liệu sản phẩm:', productData);
 
-<<<<<<< HEAD
          // Xử lý ratings nếu có từ API sản phẩm
          if (productData.ratings && Array.isArray(productData.ratings)) {
             console.log('Đánh giá sản phẩm:', productData.ratings.length, 'đánh giá');
@@ -238,13 +225,6 @@ export default function ProductDetailPage() {
             : productData.images
                ? [productData.images]
                : [];
-=======
-         const normalizedImages = Array.isArray(productData.images)
-            ? productData.images
-            : productData.images
-            ? [productData.images]
-            : [];
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
          console.log('Ảnh sản phẩm sau khi chuẩn hóa:', normalizedImages.length, 'ảnh');
 
@@ -303,7 +283,6 @@ export default function ProductDetailPage() {
       }
    }, []);
 
-<<<<<<< HEAD
    // Thay thế hoặc cập nhật phương thức fetchProductRatings
    const fetchProductRatings = useCallback(async (productId: string | string[]) => {
       try {
@@ -374,8 +353,6 @@ export default function ProductDetailPage() {
       }
    };
 
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
    useEffect(() => {
       const fetchProductDetail = async () => {
          try {
@@ -404,6 +381,16 @@ export default function ProductDetailPage() {
                console.log('Dữ liệu sản phẩm:', productData);
 
                processProductData(productData);
+
+               // Tải hình ảnh chi tiết cho tất cả các phiên bản sản phẩm
+               if (productData.details && productData.details.length > 0) {
+                  // Tải tuần tự để tránh đồng thời quá nhiều request
+                  for (const detail of productData.details) {
+                     if (detail.isActive) {
+                        await fetchProductDetailImages(detail.id);
+                     }
+                  }
+               }
             } catch (fetchErr) {
                console.error('Lỗi khi lấy thông tin sản phẩm:', fetchErr);
                setError(fetchErr instanceof Error ? fetchErr.message : 'Lỗi kết nối tới máy chủ');
@@ -525,7 +512,6 @@ export default function ProductDetailPage() {
       }
    }, [selectedSize, productDetails, selectedDetail]);
 
-<<<<<<< HEAD
    useEffect(() => {
       if (productId) {
          fetchProductRatings(productId);
@@ -554,8 +540,53 @@ export default function ProductDetailPage() {
       }
    }, [activeTab, productId, fetchProductRatings]);
 
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
+   // Thêm hàm để tải chi tiết sản phẩm từ API
+   const fetchProductDetailImages = async (detailId: number) => {
+      try {
+         console.log('Tải hình ảnh chi tiết cho ID:', detailId);
+
+         // Gọi API lấy chi tiết sản phẩm
+         const response = await fetch(
+            `http://68.183.226.198:3000/api/product-details/${detailId}`
+         );
+
+         if (!response.ok) {
+            console.error('Lỗi khi tải chi tiết sản phẩm:', response.status);
+            return null;
+         }
+
+         const detailData = await response.json();
+         console.log('Dữ liệu chi tiết sản phẩm:', detailData);
+
+         if (detailData && detailData.images && detailData.images.length > 0) {
+            // Cập nhật chi tiết sản phẩm
+            setProductDetails(prev =>
+               prev.map(detail =>
+                  detail.id === detailId
+                     ? { ...detail, images: detailData.images }
+                     : detail
+               )
+            );
+            return detailData.images;
+         }
+
+         return null;
+      } catch (error) {
+         console.error('Lỗi khi tải hình ảnh chi tiết:', error);
+         return null;
+      }
+   };
+
+   // Khi người dùng chọn phiên bản sản phẩm, tải hình ảnh chi tiết nếu chưa có
+   useEffect(() => {
+      if (selectedDetailId !== null) {
+         const currentDetail = productDetails.find(d => d.id === selectedDetailId);
+         if (currentDetail && (!currentDetail.images || currentDetail.images.length === 0)) {
+            fetchProductDetailImages(selectedDetailId);
+         }
+      }
+   }, [selectedDetailId]);
+
    const selectedPriceInfo =
       selectedDetailId && detailPrices[selectedDetailId]
          ? detailPrices[selectedDetailId]
@@ -627,13 +658,8 @@ export default function ProductDetailPage() {
             selectedDetail.images && selectedDetail.images.length > 0
                ? selectedDetail.images[0].path
                : Array.isArray(product.images) && product.images.length > 0
-<<<<<<< HEAD
                   ? product.images[0].path
                   : '/images/placeholder.jpg',
-=======
-               ? product.images[0].path
-               : '/images/placeholder.jpg',
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          type: `Loại: ${selectedDetail.type}`,
          options: [
             { name: 'Kích thước', value: selectedDetail.size },
@@ -758,23 +784,15 @@ export default function ProductDetailPage() {
                         (detail) =>
                            detail.isActive &&
                            detail.images &&
+                           detail.images.length > 0 &&
                            detail.images.map((img, detailImgIndex) => (
                               <div
                                  key={`detail-${detail.id}-${detailImgIndex}`}
-<<<<<<< HEAD
                                  className={`p-1 w-1/6 cursor-pointer ${selectedDetailId === detail.id &&
                                     activeThumbnail === detailImgIndex
                                     ? 'ring-2 ring-orange-500'
                                     : ''
                                     }`}
-=======
-                                 className={`p-1 w-1/6 cursor-pointer ${
-                                    selectedDetailId === detail.id &&
-                                    activeThumbnail === detailImgIndex
-                                       ? 'ring-2 ring-orange-500'
-                                       : ''
-                                 }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                  onClick={() => {
                                     setSelectedDetailId(detail.id);
                                     setSelectedSize(detail.size);
@@ -804,20 +822,11 @@ export default function ProductDetailPage() {
                         product.images.map((img, productImgIndex) => (
                            <div
                               key={`product-${productImgIndex}`}
-<<<<<<< HEAD
                               className={`p-1 w-1/6 cursor-pointer ${activeThumbnail ===
                                  (selectedDetail?.images?.length || 0) + productImgIndex
                                  ? 'ring-2 ring-orange-500'
                                  : ''
                                  }`}
-=======
-                              className={`p-1 w-1/6 cursor-pointer ${
-                                 activeThumbnail ===
-                                 (selectedDetail?.images?.length || 0) + productImgIndex
-                                    ? 'ring-2 ring-orange-500'
-                                    : ''
-                              }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                               onClick={() => {
                                  const detailImagesLength = selectedDetail?.images?.length || 0;
                                  setActiveThumbnail(detailImagesLength + productImgIndex);
@@ -930,18 +939,10 @@ export default function ProductDetailPage() {
                               {availableSizes.map((size) => (
                                  <label
                                     key={size}
-<<<<<<< HEAD
                                     className={`flex items-center border ${selectedSize === size
                                        ? 'border-orange-500 bg-orange-50'
                                        : 'border-gray-300'
                                        } rounded px-3 py-1.5 cursor-pointer`}
-=======
-                                    className={`flex items-center border ${
-                                       selectedSize === size
-                                          ? 'border-orange-500 bg-orange-50'
-                                          : 'border-gray-300'
-                                    } rounded px-3 py-1.5 cursor-pointer`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                  >
                                     <input
                                        type='radio'
@@ -974,7 +975,6 @@ export default function ProductDetailPage() {
                                  return (
                                     <label
                                        key={value}
-<<<<<<< HEAD
                                        className={`flex items-center border ${isSelected
                                           ? 'border-orange-500 bg-orange-50'
                                           : isAvailable
@@ -984,19 +984,6 @@ export default function ProductDetailPage() {
                                              ? 'cursor-pointer'
                                              : 'opacity-50 cursor-not-allowed'
                                           }`}
-=======
-                                       className={`flex items-center border ${
-                                          isSelected
-                                             ? 'border-orange-500 bg-orange-50'
-                                             : isAvailable
-                                             ? 'border-gray-300 hover:bg-gray-50'
-                                             : 'border-gray-200 bg-gray-100'
-                                       } rounded px-3 py-1.5 ${
-                                          isAvailable
-                                             ? 'cursor-pointer'
-                                             : 'opacity-50 cursor-not-allowed'
-                                       }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                     >
                                        <input
                                           type='radio'
@@ -1124,52 +1111,28 @@ export default function ProductDetailPage() {
                   <div className='container mx-auto px-4'>
                      <ul className='flex flex-wrap'>
                         <li
-<<<<<<< HEAD
                            className={`mr-8 py-4 cursor-pointer font-medium text-base transition-colors ${activeTab === 0
                               ? 'border-b-2 border-orange-500 text-orange-700'
                               : 'text-gray-600 hover:text-orange-700'
                               }`}
-=======
-                           className={`mr-8 py-4 cursor-pointer font-medium text-base transition-colors ${
-                              activeTab === 0
-                                 ? 'border-b-2 border-orange-500 text-orange-700'
-                                 : 'text-gray-600 hover:text-orange-700'
-                           }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                            onClick={() => setActiveTab(0)}
                         >
                            Mô Tả Sản Phẩm
                         </li>
                         <li
-<<<<<<< HEAD
                            className={`mr-8 py-4 cursor-pointer font-medium text-base transition-colors ${activeTab === 1
                               ? 'border-b-2 border-orange-500 text-orange-700'
                               : 'text-gray-600 hover:text-orange-700'
                               }`}
-=======
-                           className={`mr-8 py-4 cursor-pointer font-medium text-base transition-colors ${
-                              activeTab === 1
-                                 ? 'border-b-2 border-orange-500 text-orange-700'
-                                 : 'text-gray-600 hover:text-orange-700'
-                           }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                            onClick={() => setActiveTab(1)}
                         >
                            Thông Tin Chi Tiết
                         </li>
                         <li
-<<<<<<< HEAD
                            className={`mr-8 py-4 cursor-pointer font-medium text-base transition-colors ${activeTab === 2
                               ? 'border-b-2 border-orange-500 text-orange-700'
                               : 'text-gray-600 hover:text-orange-700'
                               }`}
-=======
-                           className={`mr-8 py-4 cursor-pointer font-medium text-base transition-colors ${
-                              activeTab === 2
-                                 ? 'border-b-2 border-orange-500 text-orange-700'
-                                 : 'text-gray-600 hover:text-orange-700'
-                           }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                            onClick={() => setActiveTab(2)}
                         >
                            Đánh Giá từ Khách Hàng
@@ -1223,7 +1186,6 @@ export default function ProductDetailPage() {
 
                   {activeTab === 2 && (
                      <div>
-<<<<<<< HEAD
                         {loadingRatings ? (
                            <div className="text-center py-8">
                               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
@@ -1327,11 +1289,6 @@ export default function ProductDetailPage() {
                               <p className="mt-2">Hãy là người đầu tiên đánh giá sản phẩm!</p>
                            </div>
                         )}
-=======
-                        <div className='text-center py-8 text-gray-500'>
-                           Chưa có đánh giá nào cho sản phẩm này.
-                        </div>
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                      </div>
                   )}
                </div>

@@ -1,10 +1,6 @@
 'use client';
 
-<<<<<<< HEAD
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-=======
-import React, { useState, useEffect, useCallback } from 'react';
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 import { useRouter } from 'next/navigation';
 import { FaSpinner, FaExclamationTriangle, FaAddressBook, FaPlus } from 'react-icons/fa';
 
@@ -88,12 +84,9 @@ export default function AddressPage() {
    const router = useRouter();
    const [userId, setUserId] = useState<number | null>(null);
 
-<<<<<<< HEAD
    const initialized = useRef(false);
    const addressesLoaded = useRef(false);
 
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
    const showToastMessage = useCallback((message: string, type: 'success' | 'error' | 'info') => {
       setToast({
          show: true,
@@ -114,10 +107,6 @@ export default function AddressPage() {
             throw new Error('No authentication token found');
          }
 
-<<<<<<< HEAD
-=======
-         // Use relative URL path instead of hardcoded IP
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          const response = await fetch(`/api/v1/users/${userId}`, {
             headers: {
                Authorization: `Bearer ${token}`,
@@ -307,13 +296,8 @@ export default function AddressPage() {
                      (data.user
                         ? `${data.user.firstName || ''} ${data.user.lastName || ''}`.trim()
                         : userInfo
-<<<<<<< HEAD
                            ? `${userInfo.firstName || ''} ${userInfo.lastName || ''}`.trim()
                            : '');
-=======
-                        ? `${userInfo.firstName || ''} ${userInfo.lastName || ''}`.trim()
-                        : '');
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
                   const receiverPhone =
                      data.phone ||
@@ -365,18 +349,11 @@ export default function AddressPage() {
             if (validAddresses.length > 0) {
                setAddresses(validAddresses);
                setShowAddAddressForm(false);
-<<<<<<< HEAD
                addressesLoaded.current = true;
                showToastMessage(`Đã tìm thấy ${validAddresses.length} địa chỉ`, 'info');
             } else {
                setAddresses([]);
                addressesLoaded.current = true;
-=======
-
-               showToastMessage(`Đã tìm thấy ${validAddresses.length} địa chỉ`, 'info');
-            } else {
-               setAddresses([]);
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
                if (userId) {
                   try {
@@ -404,29 +381,19 @@ export default function AddressPage() {
                ...prev,
                isDefault: true,
             }));
-<<<<<<< HEAD
             if (addresses.length === 0) {
                setShowAddAddressForm(true);
             }
          }
       },
       [findAddressesByUserId, getUserNameAndPhone, showToastMessage, addresses.length],
-=======
-            setShowAddAddressForm(true);
-         }
-      },
-      [findAddressesByUserId, getUserNameAndPhone, showToastMessage],
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
    );
 
    useEffect(() => {
       const initialize = async () => {
          try {
-<<<<<<< HEAD
             if (initialized.current) return;
 
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             setIsLoading(true);
 
             const storedUserId = localStorage.getItem('userId');
@@ -439,20 +406,11 @@ export default function AddressPage() {
             const userIdNum = parseInt(storedUserId);
             setUserId(userIdNum);
 
-<<<<<<< HEAD
             await loadUserInfo(userIdNum);
             await loadUserAddresses(userIdNum);
             await fetchProvinces();
 
             initialized.current = true;
-=======
-            // Kiểm tra nếu đã có dữ liệu địa chỉ thì không cần tải lại
-            if (addresses.length === 0) {
-               await loadUserInfo(userIdNum);
-               await loadUserAddresses(userIdNum);
-               await fetchProvinces();
-            }
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          } catch (err) {
             if (err instanceof Error && err.message === 'Unauthorized') {
                router.push('/user/signin?redirect=/user/profile/address');
@@ -460,20 +418,16 @@ export default function AddressPage() {
             }
             setError('Không thể tải dữ liệu địa chỉ. Vui lòng thử lại sau.');
             showToastMessage('Không thể tải dữ liệu địa chỉ.', 'error');
-<<<<<<< HEAD
 
             if (!addresses.length) {
                setShowAddAddressForm(true);
             }
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          } finally {
             setIsLoading(false);
          }
       };
 
       initialize();
-<<<<<<< HEAD
    }, [router, loadUserInfo, loadUserAddresses, fetchProvinces, showToastMessage]);
 
    useEffect(() => {
@@ -481,17 +435,6 @@ export default function AddressPage() {
          setShowAddAddressForm(true);
       }
    }, [addresses.length, isLoading]);
-=======
-      // Đảm bảo dependencies không gây render lại liên tục
-   }, [
-      router,
-      loadUserInfo,
-      loadUserAddresses,
-      fetchProvinces,
-      showToastMessage,
-      addresses.length,
-   ]);
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
    useEffect(() => {
       const token = localStorage.getItem('token');
@@ -794,27 +737,15 @@ export default function AddressPage() {
       try {
          setIsLoading(true);
 
-<<<<<<< HEAD
          setCurrentAddress({ ...address });
          setNewAddress({ ...address });
 
-=======
-         // Tạo một bản sao của địa chỉ hiện tại để chỉnh sửa
-         setCurrentAddress({ ...address });
-         setNewAddress({ ...address });
-
-         // Tìm và cập nhật provinces, districts, wards cho địa chỉ hiện tại
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          const matchedProvince = provinces.find(
             (p) => p.name.toLowerCase() === address.province.toLowerCase(),
          );
 
          if (matchedProvince) {
             try {
-<<<<<<< HEAD
-=======
-               // Lấy districts trước
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                const distResponse = await fetch(
                   `https://provinces.open-api.vn/api/p/${matchedProvince.id}?depth=2`,
                );
@@ -826,10 +757,6 @@ export default function AddressPage() {
                   }));
                   setDistricts(distList);
 
-<<<<<<< HEAD
-=======
-                  // Tìm district phù hợp và lấy wards
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                   const matchedDistrict = distList.find(
                      (d: { name: string; id: string }) =>
                         d.name.toLowerCase() === address.district.toLowerCase(),
@@ -906,11 +833,7 @@ export default function AddressPage() {
             ward: String(newAddress.ward).toLowerCase(),
             street: String(newAddress.streetAddress),
             userId: userId || parseInt(localStorage.getItem('userId') || '0'),
-<<<<<<< HEAD
             isDefault: Boolean(newAddress.isDefault),
-=======
-            isDefault: Boolean(newAddress.isDefault), // Convert to boolean
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          };
 
          console.log('Sending address data:', addressData);
@@ -1234,18 +1157,10 @@ export default function AddressPage() {
                                  type='button'
                                  onClick={handleCancelAddAddress}
                                  className={`flex-1 py-2 border border-gray-300 rounded-md text-gray-700 
-<<<<<<< HEAD
                                             ${addresses.length === 0 && !newAddress.id
                                        ? 'opacity-50 cursor-not-allowed bg-gray-100'
                                        : 'hover:bg-gray-50'
                                     }`}
-=======
-                                            ${
-                                               addresses.length === 0 && !newAddress.id
-                                                  ? 'opacity-50 cursor-not-allowed bg-gray-100'
-                                                  : 'hover:bg-gray-50'
-                                            }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                  disabled={addresses.length === 0 && !newAddress.id}
                               >
                                  Hủy

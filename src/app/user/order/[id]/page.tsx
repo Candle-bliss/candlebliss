@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, use, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Header from '@/app/components/user/nav/page';
 import Footer from '@/app/components/user/footer/page';
 import Toast from '@/app/components/ui/toast/Toast';
@@ -13,10 +13,28 @@ interface OrderItem {
    status: string;
    unit_price: string;
    product_detail_id: number;
+   product_id?: string; // Add this field
    quantity: number;
    totalPrice: string;
    product?: {
+      id?: number; // Add this field
       name: string;
+      images: string[];
+   };
+   product_detail?: {
+      id: number;
+      size: string;
+      type: string;
+      values: string;
+      images: string[];
+   };
+   productDetailData?: { // Add this field for detailed product info
+      id: number;
+      size: string;
+      type: string;
+      values: string;
+      quantities: number;
+      isActive: boolean;
       images: string[];
    };
    __entity: string;
@@ -43,13 +61,10 @@ interface Order {
    recipient_name?: string;
    recipient_phone?: string;
    // Lưu ý: có thể API trả về những thông tin này trong trường address dưới dạng chuỗi
-<<<<<<< HEAD
    statusUpdates?: {
       status: string;
       updatedAt: string;
    }[];
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 }
 
 // Format price helper function
@@ -77,7 +92,6 @@ const formatDate = (dateString: string): string => {
 // Trạng thái đơn hàng và màu sắc tương ứng
 const orderStatusColors: Record<string, { bg: string; text: string; border: string }> = {
    'Đơn hàng vừa được tạo': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
-<<<<<<< HEAD
    'Đang chờ thanh toán': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
    'Thanh toán thành công': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
    'Thanh toán thất bại': { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
@@ -95,20 +109,14 @@ const orderStatusColors: Record<string, { bg: string; text: string; border: stri
    'Đang chờ hoàn tiền': { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
    'Hoàn tiền thành công': { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200' },
    'Hoàn tiền thất bại': { bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-200' },
-=======
-   'Đang xử lý': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
-   'Đang giao hàng': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
-   'Đã giao hàng': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
-   'Đã hủy': { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 };
 
-export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
-   // Unwrap the params Promise using React.use()
-   const resolvedParams = use(params);
-   const orderId = resolvedParams.id;
-
+export default function OrderDetailPage() {
    const router = useRouter();
+   const pathname = usePathname();
+   // Lấy orderId từ pathname thay vì params
+   const orderId = pathname ? pathname.split('/').pop() : '';
+
    const [loading, setLoading] = useState(true);
    const [order, setOrder] = useState<Order | null>(null);
    const [userId, setUserId] = useState<number | null>(null);
@@ -132,7 +140,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       }, 3000);
    }, []);
 
-<<<<<<< HEAD
    // Hàm tạo key cho localStorage
    const getOrderStatusHistoryKey = (orderId: string, userId: number | null) => {
       if (!userId) return null;
@@ -450,6 +457,89 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       return timeline;
    };
 
+   // Add fetchProductDetails function inside OrderDetailPage component
+   const fetchProductDetails = useCallback(
+      async (order: Order | null) => {
+         if (!order) return;
+
+         const token = localStorage.getItem('token');
+         if (!token) return;
+
+         let hasUpdates = false;
+         const updatedOrder = { ...order };
+
+         // Process all items in the order
+         for (const item of updatedOrder.item) {
+            // Get the product data directly if we have product_id
+            if (item.product_id && (!item.product || !item.product.images || item.product.images.length === 0)) {
+               try {
+                  console.log(`Fetching product with ID: ${item.product_id}`);
+                  const productResponse = await fetch(
+                     `http://68.183.226.198:3000/api/products/${item.product_id}`,
+                     {
+                        headers: {
+                           Authorization: `Bearer ${token}`,
+                        },
+                     },
+                  );
+
+                  if (productResponse.ok) {
+                     const productData = await productResponse.json();
+                     console.log(`Product data fetched:`, productData);
+
+                     // Find the matching product detail
+                     const matchingDetail = productData.details?.find(
+                        (detail: { id: number }) => detail.id === item.product_detail_id
+                     );
+
+                     // Set the product information
+                     item.product = {
+                        id: productData.id,
+                        name: productData.name || "Sản phẩm không tên",
+                        images: productData.images?.map((img: { path: string }) => img.path) || []
+                     };
+
+                     // If we found matching detail, store it
+                     if (matchingDetail) {
+                        item.productDetailData = {
+                           id: matchingDetail.id,
+                           size: matchingDetail.size,
+                           type: matchingDetail.type,
+                           values: matchingDetail.values,
+                           quantities: matchingDetail.quantities,
+                           isActive: matchingDetail.isActive,
+                           images: matchingDetail.images?.map((img: { path: string }) => img.path) || []
+                        };
+
+                        // Set product_detail as well for compatibility
+                        if (!item.product_detail) {
+                           item.product_detail = {
+                              id: matchingDetail.id,
+                              size: matchingDetail.size,
+                              type: matchingDetail.type,
+                              values: matchingDetail.values,
+                              images: matchingDetail.images?.map((img: { path: string }) => img.path) || []
+                           };
+                        }
+                     }
+
+                     hasUpdates = true;
+                  } else {
+                     console.error(`Error fetching product ${item.product_id}, status: ${productResponse.status}`);
+                  }
+               } catch (productError) {
+                  console.error(`Failed to fetch product for product_id ${item.product_id}:`, productError);
+               }
+            }
+         }
+
+         if (hasUpdates) {
+            setOrder(updatedOrder);
+         }
+      },
+      []
+   );
+
    // Then update your useEffect
    useEffect(() => {
       const init = async () => {
@@ -466,12 +556,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
          try {
             setLoading(true);
-=======
-   // First, wrap loadOrderDetail with useCallback
-   const loadOrderDetail = useCallback(
-      async (orderId: string) => {
-         try {
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             const token = localStorage.getItem('token');
             if (!token) {
                showToastMessage('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại', 'error');
@@ -479,10 +563,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                return;
             }
 
-<<<<<<< HEAD
-=======
-            // Sửa URL API theo định dạng mới
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             const response = await fetch(
                `http://68.183.226.198:3000/api/orders/${orderId}?id=${orderId}`,
                {
@@ -502,21 +582,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             }
 
             const data = await response.json();
-<<<<<<< HEAD
 
             // Kiểm tra quyền xem đơn hàng
             if (parsedUserId !== data.user_id) {
-=======
-            setOrder(data);
-
-            // Add this check
-            if (userId !== data.user_id) {
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                showToastMessage('Bạn không có quyền xem đơn hàng này', 'error');
                router.push('/user/order');
                return;
             }
-<<<<<<< HEAD
 
             // Lưu trữ lịch sử trạng thái đơn hàng vào localStorage nếu có
             if (data.statusUpdates && data.statusUpdates.length > 0) {
@@ -542,47 +614,20 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             }
 
             setOrder(data);
+
+            // Fetch product details after setting the order
+            fetchProductDetails(data);
+
          } catch (error) {
             console.error('Error loading order detail:', error);
             showToastMessage('Không thể tải chi tiết đơn hàng', 'error');
-=======
-         } catch (error) {
-            console.error('Error loading order detail:', error);
-            showToastMessage('Không thể tải chi tiết đơn hàng', 'error');
-         }
-      },
-      [router, showToastMessage, userId],
-   );
-
-   // Then update your useEffect
-   useEffect(() => {
-      const init = async () => {
-         // Lấy thông tin userId từ localStorage
-         const storedUserId = localStorage.getItem('userId');
-         if (!storedUserId) {
-            // Nếu không có userId, chuyển về trang đăng nhập
-            router.push('/user/signin');
-            return;
-         }
-
-         const userId = parseInt(storedUserId);
-         setUserId(userId);
-
-         try {
-            setLoading(true);
-            await loadOrderDetail(orderId);
-         } catch (error) {
-            console.error('Error initializing data:', error);
-            showToastMessage('Có lỗi xảy ra khi tải dữ liệu', 'error');
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          } finally {
             setLoading(false);
          }
       };
 
       init();
-<<<<<<< HEAD
-   }, [orderId, router, showToastMessage]);
+   }, [orderId, router, showToastMessage, fetchProductDetails]);
 
    // Hàm để kiểm tra trạng thái tiếp theo có hợp lệ không
    const getValidNextStatuses = (currentStatus: string): string[] => {
@@ -632,14 +677,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
          return;
       }
 
-=======
-   }, [orderId, router, loadOrderDetail, showToastMessage]);
-
-   // Hàm xử lý hủy đơn hàng
-   const handleCancelOrder = async () => {
-      if (!order) return;
-
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
       if (!confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) {
          return;
       }
@@ -654,29 +691,18 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             return;
          }
 
-<<<<<<< HEAD
          // Update API endpoint to use the status update endpoint
          const response = await fetch(
             `http://68.183.226.198:3000/api/orders/${order.id}/status`,
             {
                method: 'PATCH',
-=======
-         // Sửa URL API cho endpoint hủy đơn hàng
-         const response = await fetch(
-            `http://68.183.226.198:3000/api/orders/${order.id}/cancel?id=${order.id}`,
-            {
-               method: 'PUT',
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                headers: {
                   Authorization: `Bearer ${token}`,
                   'Content-Type': 'application/json',
                },
-<<<<<<< HEAD
                body: JSON.stringify({
                   status: 'Đã hủy'
                }),
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             },
          );
 
@@ -685,7 +711,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             throw new Error(errorData.message || 'Không thể hủy đơn hàng');
          }
 
-<<<<<<< HEAD
          // Get current time for the new status
          const currentTime = new Date().toISOString();
 
@@ -738,18 +763,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             statusUpdates: updatedStatusHistory
          });
 
-=======
-         // Cập nhật trạng thái trong state
-         setOrder({ ...order, status: 'Đã hủy' });
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          showToastMessage('Đơn hàng đã được hủy thành công', 'success');
       } catch (error: unknown) {
          console.error('Error canceling order:', error);
 
-<<<<<<< HEAD
-=======
-         // Safely extract error message
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          let errorMessage = 'Không thể hủy đơn hàng';
          if (error instanceof Error) {
             errorMessage = error.message;
@@ -763,7 +780,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       }
    };
 
-<<<<<<< HEAD
    // Hàm chung để cập nhật trạng thái đơn hàng
    const handleUpdateOrderStatus = async (newStatus: string) => {
       if (!order) return;
@@ -882,8 +898,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       await handleUpdateOrderStatus('Đã giao hàng');
    };
 
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
    // Hàm render trạng thái đơn hàng
    const renderOrderStatus = (status: string) => {
       const colorSet = orderStatusColors[status] || {
@@ -909,11 +923,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
          case 'BANKING':
             return '/images/payment/bank.png';
          case 'MOMO':
-<<<<<<< HEAD
             return '/images/momo-logo.png';
-=======
-            return '/images/payment/momo-logo.png';
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          default:
             return '/images/payment/cod.png';
       }
@@ -1014,8 +1024,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                            {/* Timeline Line */}
                            <div className='absolute left-3 top-0 h-full w-0.5 bg-gray-200'></div>
 
-<<<<<<< HEAD
-                           {/* Dynamic Status Timeline - Only show actual status updates */}
+                           {/* Modified Status Timeline - Display based on status names */}
                            {processOrderStatusHistory(order).map((statusUpdate, index) => {
                               const statusColor = orderStatusColors[statusUpdate.status] || {
                                  bg: 'bg-gray-50',
@@ -1028,13 +1037,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                               const isPaymentFailed = statusUpdate.status === 'Thanh toán thất bại';
                               const isRefundFailed = statusUpdate.status === 'Hoàn tiền thất bại';
 
-                              // Xác định icon phù hợp với trạng thái
+                              // Determine appropriate icon for the status
                               let statusIcon = (
-=======
-                           {/* Order Created */}
-                           <div className='relative flex items-start mb-8'>
-                              <div className='flex items-center justify-center w-6 h-6 rounded-full bg-green-500 text-white z-10'>
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                  <svg
                                     xmlns='http://www.w3.org/2000/svg'
                                     width='16'
@@ -1048,160 +1052,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                                  >
                                     <polyline points='20 6 9 17 4 12'></polyline>
                                  </svg>
-<<<<<<< HEAD
                               );
 
                               if (isCancelled || isPaymentFailed || isRefundFailed) {
                                  statusIcon = (
-=======
-                              </div>
-                              <div className='ml-4'>
-                                 <h3 className='font-medium'>Đơn hàng đã được tạo</h3>
-                                 <p className='text-sm text-gray-500'>
-                                    {formatDate(order.createdAt)}
-                                 </p>
-                              </div>
-                           </div>
-
-                           {/* Order Processing */}
-                           <div className='relative flex items-start mb-8'>
-                              <div
-                                 className={`flex items-center justify-center w-6 h-6 rounded-full ${
-                                    order.status !== 'Đơn hàng vừa được tạo' &&
-                                    order.status !== 'Đã hủy'
-                                       ? 'bg-green-500 text-white'
-                                       : 'bg-gray-200 text-gray-400'
-                                 } z-10`}
-                              >
-                                 {order.status !== 'Đơn hàng vừa được tạo' &&
-                                 order.status !== 'Đã hủy' ? (
-                                    <svg
-                                       xmlns='http://www.w3.org/2000/svg'
-                                       width='16'
-                                       height='16'
-                                       viewBox='0 0 24 24'
-                                       fill='none'
-                                       stroke='currentColor'
-                                       strokeWidth='2'
-                                       strokeLinecap='round'
-                                       strokeLinejoin='round'
-                                    >
-                                       <polyline points='20 6 9 17 4 12'></polyline>
-                                    </svg>
-                                 ) : (
-                                    <span className='text-xs'>2</span>
-                                 )}
-                              </div>
-                              <div className='ml-4'>
-                                 <h3
-                                    className={`font-medium ${
-                                       order.status === 'Đơn hàng vừa được tạo' ||
-                                       order.status === 'Đã hủy'
-                                          ? 'text-gray-400'
-                                          : ''
-                                    }`}
-                                 >
-                                    Đang xử lý
-                                 </h3>
-                                 <p className='text-sm text-gray-500'>
-                                    Đơn hàng của bạn đang được chuẩn bị
-                                 </p>
-                              </div>
-                           </div>
-
-                           {/* Shipping */}
-                           <div className='relative flex items-start mb-8'>
-                              <div
-                                 className={`flex items-center justify-center w-6 h-6 rounded-full ${
-                                    order.status === 'Đang giao hàng' ||
-                                    order.status === 'Đã giao hàng'
-                                       ? 'bg-green-500 text-white'
-                                       : 'bg-gray-200 text-gray-400'
-                                 } z-10`}
-                              >
-                                 {order.status === 'Đang giao hàng' ||
-                                 order.status === 'Đã giao hàng' ? (
-                                    <svg
-                                       xmlns='http://www.w3.org/2000/svg'
-                                       width='16'
-                                       height='16'
-                                       viewBox='0 0 24 24'
-                                       fill='none'
-                                       stroke='currentColor'
-                                       strokeWidth='2'
-                                       strokeLinecap='round'
-                                       strokeLinejoin='round'
-                                    >
-                                       <polyline points='20 6 9 17 4 12'></polyline>
-                                    </svg>
-                                 ) : (
-                                    <span className='text-xs'>3</span>
-                                 )}
-                              </div>
-                              <div className='ml-4'>
-                                 <h3
-                                    className={`font-medium ${
-                                       order.status !== 'Đang giao hàng' &&
-                                       order.status !== 'Đã giao hàng'
-                                          ? 'text-gray-400'
-                                          : ''
-                                    }`}
-                                 >
-                                    Đang giao hàng
-                                 </h3>
-                                 <p className='text-sm text-gray-500'>
-                                    Đơn hàng đang được vận chuyển
-                                 </p>
-                              </div>
-                           </div>
-
-                           {/* Delivered */}
-                           <div className='relative flex items-start'>
-                              <div
-                                 className={`flex items-center justify-center w-6 h-6 rounded-full ${
-                                    order.status === 'Đã giao hàng'
-                                       ? 'bg-green-500 text-white'
-                                       : 'bg-gray-200 text-gray-400'
-                                 } z-10`}
-                              >
-                                 {order.status === 'Đã giao hàng' ? (
-                                    <svg
-                                       xmlns='http://www.w3.org/2000/svg'
-                                       width='16'
-                                       height='16'
-                                       viewBox='0 0 24 24'
-                                       fill='none'
-                                       stroke='currentColor'
-                                       strokeWidth='2'
-                                       strokeLinecap='round'
-                                       strokeLinejoin='round'
-                                    >
-                                       <polyline points='20 6 9 17 4 12'></polyline>
-                                    </svg>
-                                 ) : (
-                                    <span className='text-xs'>4</span>
-                                 )}
-                              </div>
-                              <div className='ml-4'>
-                                 <h3
-                                    className={`font-medium ${
-                                       order.status !== 'Đã giao hàng' ? 'text-gray-400' : ''
-                                    }`}
-                                 >
-                                    Đã giao hàng
-                                 </h3>
-                                 <p className='text-sm text-gray-500'>
-                                    Đơn hàng đã được giao thành công
-                                 </p>
-                              </div>
-                           </div>
-
-                           {/* Cancelled (conditional) */}
-                           {order.status === 'Đã hủy' && (
-                              <div className='relative flex items-start mt-8 pl-10'>
-                                 <div className='absolute left-3 top-0 h-full w-0.5 bg-red-200'></div>
-                                 <div className='flex items-center justify-center w-6 h-6 rounded-full bg-red-500 text-white z-10'>
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                     <svg
                                        xmlns='http://www.w3.org/2000/svg'
                                        width='16'
@@ -1216,7 +1070,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                                        <line x1='18' y1='6' x2='6' y2='18'></line>
                                        <line x1='6' y1='6' x2='18' y2='18'></line>
                                     </svg>
-<<<<<<< HEAD
                                  );
                               } else if (isCompleted) {
                                  statusIcon = (
@@ -1260,15 +1113,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                                  </div>
                               );
                            })}
-=======
-                                 </div>
-                                 <div className='ml-4'>
-                                    <h3 className='font-medium text-red-600'>Đơn hàng đã bị hủy</h3>
-                                    <p className='text-sm text-gray-500'>Đơn hàng này đã bị hủy</p>
-                                 </div>
-                              </div>
-                           )}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                         </div>
                      </div>
                   </div>
@@ -1284,9 +1128,15 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                            <div key={item.id} className='flex py-3 border-b border-gray-100'>
                               <div className='relative w-20 h-20 bg-gray-100 rounded'>
                                  <Image
-                                    src={item.product?.images?.[0] || '/images/placeholder.jpg'}
+                                    src={
+                                       item.product?.images?.[0] ||
+                                       item.productDetailData?.images?.[0] ||
+                                       item.product_detail?.images?.[0] ||
+                                       '/images/placeholder.jpg'
+                                    }
                                     alt={
-                                       item.product?.name || `Sản phẩm #${item.product_detail_id}`
+                                       item.product?.name ||
+                                       `Sản phẩm #${item.product_detail_id}`
                                     }
                                     layout='fill'
                                     objectFit='contain'
@@ -1297,8 +1147,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                                  <div className='flex justify-between'>
                                     <div>
                                        <p className='font-medium'>
-                                          {item.product?.name ||
-                                             `Sản phẩm #${item.product_detail_id}`}
+                                          {item.product?.name || `Sản phẩm #${item.product_detail_id}`}
+                                       </p>
+                                       <p className='text-sm text-gray-500 mt-1'>
+                                          {item.productDetailData?.size || item.product_detail?.size ?
+                                             `${item.productDetailData?.size || item.product_detail?.size} - ` :
+                                             ''}
+                                          {item.productDetailData?.values || item.product_detail?.values || ''}
                                        </p>
                                        <p className='text-sm text-gray-500 mt-1'>
                                           Đơn giá: {formatPrice(item.unit_price)}
@@ -1353,17 +1208,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                                     {order.method_payment === 'COD'
                                        ? 'Tiền mặt khi nhận hàng'
                                        : order.method_payment === 'BANKING'
-<<<<<<< HEAD
                                           ? 'Chuyển khoản ngân hàng'
                                           : order.method_payment === 'MOMO'
                                              ? 'Ví MoMo'
                                              : 'Không xác định'}
-=======
-                                       ? 'Chuyển khoản ngân hàng'
-                                       : order.method_payment === 'MOMO'
-                                       ? 'Ví MoMo'
-                                       : 'Không xác định'}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                  </span>
                               </div>
                            </div>
@@ -1423,12 +1271,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                                        d='M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'
                                     />
                                  </svg>
-<<<<<<< HEAD
                                  <span>
                                     {(() => {
                                        // Thử lấy thông tin từ localStorage trước
                                        const shippingInfo = getShippingInfoFromLocalStorage(
-                                          orderId,
+                                          orderId || '',
                                           userId,
                                        );
                                        if (shippingInfo?.fullName) {
@@ -1438,9 +1285,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                                        return order.recipient_name || 'Không có thông tin';
                                     })()}
                                  </span>
-=======
-                                 <span>{order.recipient_name || 'Không có thông tin'}</span>
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                               </p>
                               <p className='flex items-center'>
                                  <svg
@@ -1457,12 +1301,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                                        d='M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z'
                                     />
                                  </svg>
-<<<<<<< HEAD
                                  <span>
                                     {(() => {
                                        // Thử lấy thông tin từ localStorage trước
                                        const shippingInfo = getShippingInfoFromLocalStorage(
-                                          orderId,
+                                          orderId || '',
                                           userId,
                                        );
                                        if (shippingInfo?.phone) {
@@ -1472,9 +1315,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                                        return order.recipient_phone || 'Không có thông tin';
                                     })()}
                                  </span>
-=======
-                                 <span>{order.recipient_phone || 'Không có thông tin'}</span>
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                               </p>
                            </div>
                         </div>
@@ -1503,7 +1343,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                                     d='M15 11a3 3 0 11-6 0 3 3 0 016 0z'
                                  />
                               </svg>
-<<<<<<< HEAD
                               <span>
                                  {(() => {
                                     return order.address || 'Không có thông tin';
@@ -1511,22 +1350,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                               </span>
                            </p>
                         </div>
-=======
-                              <span>{order.address || 'Không có thông tin'}</span>
-                           </p>
-                        </div>
-
-                        {/* Nếu đơn hàng đang giao, có thể hiển thị thông tin đơn vị vận chuyển */}
-                        {order.status === 'Đang giao hàng' && (
-                           <div className='mt-4 pt-4 border-t border-gray-100'>
-                              <h3 className='font-medium mb-2'>Đơn vị vận chuyển:</h3>
-                              <p className='text-gray-600'>Giao hàng nhanh</p>
-                              <p className='text-gray-600 text-sm'>
-                                 Mã vận đơn: {order.order_code}
-                              </p>
-                           </div>
-                        )}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                      </div>
                   </div>
 
@@ -1540,12 +1363,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                            Quay lại danh sách đơn hàng
                         </Link>
 
-<<<<<<< HEAD
                         {/* Nút hủy đơn chỉ hiển thị với các trạng thái cho phép hủy */}
                         {getValidNextStatuses(order.status).includes('Đã hủy') && (
-=======
-                        {order.status === 'Đơn hàng vừa được tạo' && (
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                            <button
                               onClick={handleCancelOrder}
                               className='block w-full py-2 text-center bg-red-600 rounded text-white hover:bg-red-700'
@@ -1554,7 +1373,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                            </button>
                         )}
 
-<<<<<<< HEAD
                         {/* Nút thanh toán khi đơn hàng đang chờ thanh toán hoặc thanh toán thất bại */}
                         {(['Đang chờ thanh toán', 'Thanh toán thất bại'].includes(order.status)) && (
                            <button
@@ -1577,9 +1395,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
                         {/* Nút đánh giá sản phẩm khi đơn hàng đã giao hoặc hoàn thành */}
                         {(['Hoàn thành', 'Đã giao hàng'].includes(order.status)) && (
-=======
-                        {order.status === 'Đã giao hàng' && (
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                            <Link
                               href={`/user/review?order=${order.id}`}
                               className='block w-full py-2 text-center bg-green-600 rounded text-white hover:bg-green-700'
@@ -1588,7 +1403,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                            </Link>
                         )}
 
-<<<<<<< HEAD
 
 
 
@@ -1597,22 +1411,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         {order.status === 'Đang giao hàng' && (
                            <button
                               onClick={() => {
-=======
-                        <button
-                           onClick={() => {
-                              // Logic để mua lại đơn hàng
-                              router.push('/user/cart');
-                           }}
-                           className='block w-full py-2 text-center bg-orange-600 rounded text-white hover:bg-orange-700'
-                        >
-                           Mua lại
-                        </button>
-
-                        {order.status === 'Đang giao hàng' && (
-                           <button
-                              onClick={() => {
-                                 // Modal theo dõi đơn hàng hoặc chuyển hướng tới trang theo dõi
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                                  showToastMessage('Tính năng đang được phát triển', 'info');
                               }}
                               className='block w-full py-2 text-center border border-blue-600 rounded text-blue-600 hover:bg-blue-50'
@@ -1620,19 +1418,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                               Theo dõi đơn hàng
                            </button>
                         )}
-<<<<<<< HEAD
 
-                        {/* Nút mua lại luôn hiển thị trừ các trạng thái đặc biệt */}
-                        {!['Đang chờ thanh toán', 'Đổi trả hàng', 'Trả hàng hoàn tiền', 'Đang chờ hoàn tiền'].includes(order.status) && (
-                           <button
-                              onClick={() => router.push('/user/cart')}
-                              className='block w-full py-2 text-center bg-orange-600 rounded text-white hover:bg-orange-700'
-                           >
-                              Mua lại
-                           </button>
-                        )}
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
+
                      </div>
                   </div>
                </div>

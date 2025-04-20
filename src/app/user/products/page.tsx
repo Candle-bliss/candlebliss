@@ -92,18 +92,10 @@ const ProductCard = ({
                {variants.map((variant) => (
                   <button
                      key={variant.detailId}
-<<<<<<< HEAD
                      className={`text-xs px-2 py-1 border rounded ${selectedVariant === variant.detailId
                         ? 'border-orange-500 bg-orange-50'
                         : 'border-gray-300'
                         }`}
-=======
-                     className={`text-xs px-2 py-1 border rounded ${
-                        selectedVariant === variant.detailId
-                           ? 'border-orange-500 bg-orange-50'
-                           : 'border-gray-300'
-                     }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                      onClick={() => handleVariantChange(variant.detailId)}
                   >
                      {variant.size} - {variant.type}
@@ -347,40 +339,28 @@ export default function ProductPage() {
    useEffect(() => {
       const fetchProducts = async () => {
          try {
-<<<<<<< HEAD
             // 1. Lấy danh sách sản phẩm cơ bản
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             const productsResponse = await fetch('http://68.183.226.198:3000/api/products');
             if (!productsResponse.ok) {
                throw new Error('Failed to fetch products');
             }
             const productsData: Product[] = await productsResponse.json();
 
-<<<<<<< HEAD
             // Chuẩn hóa danh sách sản phẩm
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             const normalizedProducts = productsData.map((product) => ({
                ...product,
                images: Array.isArray(product.images) ? product.images : [product.images],
             }));
 
-<<<<<<< HEAD
             // 2. Lấy thêm thông tin về giá
             try {
                // Fetch prices data
-=======
-            try {
-               // Lấy dữ liệu giá
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                const pricesResponse = await fetch('http://68.183.226.198:3000/api/v1/prices', {
                   headers: {
                      Authorization: 'Bearer ' + localStorage.getItem('token'),
                   },
                });
                if (!pricesResponse.ok) {
-<<<<<<< HEAD
                   throw new Error('Failed to fetch prices');
                }
 
@@ -500,118 +480,6 @@ export default function ProductPage() {
                      }
                   }
 
-=======
-                  // Xử lý khi không lấy được giá
-                  return;
-               }
-
-               const pricesData: Price[] = await pricesResponse.json();
-               console.log('Tổng số giá được tìm thấy:', pricesData.length);
-
-               // Lấy thông tin chi tiết sản phẩm (product details) trực tiếp để biết chúng thuộc về sản phẩm nào
-               // Nếu API không có sẵn, chúng ta sẽ thử phương pháp khác
-               const productDetailMapping: { [key: number]: number } = {};
-
-               // Phương pháp 1: Lấy mapping từ product.details nếu có
-               normalizedProducts.forEach((product) => {
-                  if (product.details && product.details.length > 0) {
-                     product.details.forEach((detail) => {
-                        productDetailMapping[detail.id] = product.id;
-                     });
-                  }
-               });
-
-               console.log('Mapped product details:', Object.keys(productDetailMapping).length);
-
-               // Tạo danh sách sản phẩm hiển thị
-               const mappedProducts = normalizedProducts.map((product) => {
-                  console.log(`Mapping product ${product.id}: ${product.name}`);
-
-                  const imageUrl =
-                     product.images && product.images.length > 0 ? product.images[0].path : null;
-
-                  // Tìm tất cả các giá liên quan đến sản phẩm này thông qua product details
-                  const relatedPrices = [];
-
-                  // Cách 1: Nếu sản phẩm có danh sách details
-                  if (product.details && product.details.length > 0) {
-                     const detailIds = product.details.map((detail) => detail.id);
-
-                     // Tìm giá cho từng chi tiết sản phẩm
-                     detailIds.forEach((detailId) => {
-                        const matchingPrices = pricesData.filter(
-                           (price) => price.product_detail && price.product_detail.id === detailId,
-                        );
-                        relatedPrices.push(...matchingPrices);
-                     });
-                  }
-                  // Cách 2: Nếu không có details, thử nhiều cách khác để tìm liên kết
-                  else {
-                     // Tạo mảng ID chi tiết sản phẩm có thể thuộc về sản phẩm này
-                     // Dùng heuristic: Chi tiết sản phẩm có thể có ID gần với ID sản phẩm
-                     const potentialDetailIds = Array.from({ length: 5 }, (_, i) => product.id + i);
-                     potentialDetailIds.push(product.id, product.id * 2, product.id * 3); // Thêm một vài phỏng đoán
-
-                     pricesData.forEach((price) => {
-                        if (
-                           price.product_detail &&
-                           potentialDetailIds.includes(price.product_detail.id)
-                        ) {
-                           relatedPrices.push(price);
-                        }
-                     });
-                  }
-
-                  console.log(`Found ${relatedPrices.length} prices for product ${product.id}`);
-
-                  // Nếu không tìm thấy giá, thử dùng một số heuristic khác
-                  if (relatedPrices.length === 0) {
-                     // Dùng product_detail đầu tiên trong pricesData nếu không có dữ liệu khác
-                     // Đây chỉ là giải pháp tạm thời để hiển thị
-                     // Trong thực tế cần cải thiện API để trả về thông tin chính xác hơn
-                     if (pricesData.length > 0) {
-                        const firstPrice = pricesData[0];
-                        relatedPrices.push(firstPrice);
-                        console.log(`Using fallback price for product ${product.id}`);
-                     }
-                  }
-
-                  // Xử lý giá
-                  let basePrice = '0';
-                  let discountPrice: string | undefined = undefined;
-
-                  if (relatedPrices.length > 0) {
-                     // Sắp xếp giá từ thấp đến cao
-                     relatedPrices.sort((a, b) => Number(a.base_price) - Number(b.base_price));
-                     basePrice = relatedPrices[0].base_price.toString();
-
-                     // Tìm giá khuyến mãi thấp nhất
-                     const discountPrices = relatedPrices.filter(
-                        (price) => price.discount_price && Number(price.discount_price) > 0,
-                     );
-
-                     if (discountPrices.length > 0) {
-                        // Lưu ý: discount_price ở đây là phần trăm giảm giá (ví dụ: 50 có nghĩa là giảm 50%)
-                        discountPrice = discountPrices[0].discount_price.toString();
-                     }
-                  }
-
-                  // Tạo danh sách biến thể (variants)
-                  const variants = relatedPrices.map((price) => {
-                     const detail = price.product_detail;
-                     return {
-                        detailId: detail.id,
-                        size: detail.size || 'Default',
-                        type: detail.type || 'Standard',
-                        basePrice: price.base_price.toString(),
-                        discountPrice: price.discount_price
-                           ? price.discount_price.toString()
-                           : undefined,
-                        inStock: detail.quantities > 0 && detail.isActive,
-                     };
-                  });
-
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                   return {
                      id: product.id,
                      title: product.name,
@@ -622,17 +490,12 @@ export default function ProductPage() {
                      imageUrl: imageUrl || '/images/placeholder.jpg',
                      variants: variants.length > 0 ? variants : undefined,
                   };
-<<<<<<< HEAD
                }));
-=======
-               });
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
                setProducts(mappedProducts);
                setFilteredProducts(mappedProducts);
             } catch (priceErr) {
                console.error('Error fetching prices:', priceErr);
-<<<<<<< HEAD
                // Fallback khi không lấy được thông tin giá
                const mappedProductsWithoutPrices = normalizedProducts.map(product => ({
                   id: product.id,
@@ -647,9 +510,6 @@ export default function ProductPage() {
 
                setProducts(mappedProductsWithoutPrices);
                setFilteredProducts(mappedProductsWithoutPrices);
-=======
-               // Xử lý fallback khi không lấy được giá
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             }
          } catch (err) {
             console.error('Error fetching products:', err);
@@ -771,14 +631,8 @@ export default function ProductPage() {
                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                         <button
                            key={page}
-<<<<<<< HEAD
                            className={`px-3 py-1 ${currentPage === page ? 'bg-gray-200 font-medium' : 'hover:bg-gray-100'
                               } rounded-md text-gray-700`}
-=======
-                           className={`px-3 py-1 ${
-                              currentPage === page ? 'bg-gray-200 font-medium' : 'hover:bg-gray-100'
-                           } rounded-md text-gray-700`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                            onClick={() => setCurrentPage(page)}
                         >
                            {page}

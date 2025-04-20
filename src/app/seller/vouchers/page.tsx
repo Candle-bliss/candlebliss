@@ -56,23 +56,13 @@ export default function VoucherPage() {
             });
 
             if (!response.ok) {
-<<<<<<< HEAD
                throw new Error('Failed to fetch vouchers');
             }
-=======
-               throw new Error(`Error: ${response.status}`);
-            }
-
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
             const data = await response.json();
             setVouchers(data);
          } catch (err) {
             console.error('Failed to fetch vouchers:', err);
-<<<<<<< HEAD
             setError('Chưa có mã giảm giá. ');
-=======
-            setError('Không thể tải danh sách mã giảm giá. Vui lòng thử lại sau.');
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          } finally {
             setLoading(false);
          }
@@ -298,10 +288,6 @@ export default function VoucherPage() {
                               d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'
                            />
                         </svg>
-<<<<<<< HEAD
-=======
-                        <h3 className='text-lg font-medium text-gray-600 mb-1'>Có lỗi xảy ra</h3>
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                         <p className='text-gray-500 max-w-md'>{error}</p>
                      </div>
                   )}

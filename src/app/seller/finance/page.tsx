@@ -4,11 +4,7 @@ import Link from 'next/link';
 import Header from '@/app/components/seller/header/page';
 import Sidebar from '@/app/components/seller/menusidebar/page';
 import Image from 'next/image';
-<<<<<<< HEAD
 import { useState, useEffect, SetStateAction, useCallback, useMemo } from 'react';
-=======
-import { useState, useEffect } from 'react';
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 import {
    Search,
    DollarSign,
@@ -22,7 +18,6 @@ import {
    Download,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-<<<<<<< HEAD
 import {
    Chart as ChartJS,
    CategoryScale,
@@ -85,14 +80,11 @@ interface ChartData {
    totalOrderValue: number;
    totalShippingFee: number;
 }
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
 export default function FinancePage() {
    const [searchTerm, setSearchTerm] = useState('');
    const [currentTab, setCurrentTab] = useState('overview');
    const [animateStats, setAnimateStats] = useState(false);
-<<<<<<< HEAD
    const [timeFilter, setTimeFilter] = useState('month');
    const [timeValue, setTimeValue] = useState(4); // Default to current month (April)
    const [year] = useState(2025);
@@ -137,13 +129,10 @@ export default function FinancePage() {
 
    // Add this state
    const [chartView, setChartView] = useState<'current' | 'historical'>('historical');
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
    useEffect(() => {
       // Kích hoạt animation khi component mount
       setAnimateStats(true);
-<<<<<<< HEAD
 
       // Fetch statistics data
       fetchStatisticsData();
@@ -165,20 +154,27 @@ export default function FinancePage() {
       }
    }, [timeFilter, timeValue, year, chartView]);
 
+   // Modify the fetchStatisticsData function to properly filter orders
    const fetchStatisticsData = async () => {
       setLoading(true);
       try {
-         const response = await fetch(`/api/orders/statistics?timeFilter=${timeFilter}&timeValue=${timeValue}&year=${year}`);
-         if (!response.ok) {
-            throw new Error('Failed to fetch statistics data');
-         }
-         const data = await response.json();
-         setStatsData(data);
+         // Filter orders with valid statuses for revenue calculation
+         const validOrders = orders.filter(order => isRevenueCountableStatus(order.status));
 
-         // Cập nhật dữ liệu cho biểu đồ
-         updateChartData(data);
+         // Calculate statistics based on filtered orders
+         const statsData = {
+            totalRevenue: validOrders.reduce((sum, order) => sum + parseInt(order.total_price), 0),
+            totalOrderValue: validOrders.reduce((sum, order) => sum + parseInt(order.total_price), 0),
+            totalShippingFee: validOrders.reduce((sum, order) => sum + parseInt(order.ship_price), 0),
+            totalOrders: validOrders.length
+         };
+
+         setStatsData(statsData);
+
+         // Update chart data
+         updateChartData(statsData);
       } catch (error) {
-         console.error('Error fetching statistics data:', error);
+         console.error('Error processing statistics data:', error);
       } finally {
          setLoading(false);
       }
@@ -243,8 +239,10 @@ export default function FinancePage() {
 
       if (hasUpdates) {
          setOrders(updatedOrders);
-         // Cập nhật filteredOrders nếu cần
-         const filtered = updatedOrders.filter(order => order.status === 'Hoàn thành');
+
+         // Filter orders by valid statuses before mapping to completedOrders
+         const filtered = updatedOrders.filter(order => isRevenueCountableStatus(order.status));
+
          const mappedOrders = filtered.map((order) => {
             // Format date for display
             const date = new Date(order.createdAt);
@@ -262,6 +260,7 @@ export default function FinancePage() {
                date: formattedDate,
             };
          });
+
          setCompletedOrders(mappedOrders);
       }
    }, [fetchedUserIds]);
@@ -271,6 +270,13 @@ export default function FinancePage() {
          fetchUserData(orders);
       }
    }, [orders, fetchUserData]);
+
+   // Add this useEffect to recalculate statistics when orders change
+   useEffect(() => {
+      if (orders.length > 0) {
+         fetchStatisticsData();
+      }
+   }, [orders]);
 
    const handleTimeFilterChange = (event: { target: { value: SetStateAction<string>; }; }) => {
       setTimeFilter(event.target.value);
@@ -283,45 +289,28 @@ export default function FinancePage() {
          setTimeValue(2025); // Current year
       }
    };
-=======
-   }, []);
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
    const stats = [
       {
          id: 1,
          title: 'Doanh thu',
-<<<<<<< HEAD
          value: `${statsData.totalRevenue?.toLocaleString()} VND`,
          trend: `+${statsData.totalRevenue > 0 ? '37.8%' : '0%'}`,
-=======
-         value: '241,891.12 VND',
-         trend: '+37.8%',
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          bg: 'bg-gradient-to-br from-blue-50 to-blue-100',
          icon: <DollarSign className='text-blue-500' size={28} />,
       },
       {
          id: 2,
          title: 'Tổng giá trị đơn hàng',
-<<<<<<< HEAD
          value: `${statsData.totalOrderValue?.toLocaleString()} VND`,
          trend: `+${statsData.totalOrderValue > 0 ? '37.8%' : '0%'}`,
-=======
-         value: '241,891.12 VND',
-         trend: '+37.8%',
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          bg: 'bg-gradient-to-br from-purple-50 to-purple-100',
          icon: <ShoppingCart className='text-purple-500' size={28} />,
       },
       {
          id: 3,
          title: 'Tổng phí vận chuyển',
-<<<<<<< HEAD
          value: `${statsData.totalShippingFee?.toLocaleString()} VND`,
-=======
-         value: '241,891.12 VND',
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          trend: 'Phí vận chuyển',
          bg: 'bg-gradient-to-br from-green-50 to-green-100',
          icon: <Truck className='text-green-500' size={28} />,
@@ -329,13 +318,8 @@ export default function FinancePage() {
       {
          id: 4,
          title: 'Đơn hàng',
-<<<<<<< HEAD
          value: `${statsData.totalOrders || 0} Đơn hàng`,
          trend: `+${statsData.totalOrders || 0} đơn hàng`,
-=======
-         value: '520 Đơn hàng',
-         trend: '+20 đơn hàng',
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
          bg: 'bg-gradient-to-br from-yellow-50 to-yellow-100',
          icon: <Package className='text-yellow-500' size={28} />,
       },
@@ -355,7 +339,6 @@ export default function FinancePage() {
       { id: 3, name: 'Cameron Williamson', image: '/images/cameron.png' },
    ];
 
-<<<<<<< HEAD
    const filteredOrders = useMemo(() => {
       return completedOrders.filter(
          (order) =>
@@ -364,39 +347,6 @@ export default function FinancePage() {
             order.address.toLowerCase().includes(searchTerm.toLowerCase()),
       );
    }, [completedOrders, searchTerm]);
-=======
-   const completedOrders = [
-      {
-         id: 1,
-         orderId: 'A01',
-         customer: 'Courtney Henry',
-         address: '123 Main Street',
-         quantity: 10,
-         shippingFee: 20000,
-         total: 250000,
-         status: 'Thành công',
-         date: '20/02/2025',
-      },
-      {
-         id: 2,
-         orderId: 'A02',
-         customer: 'Jenny Wilson',
-         address: '456 Elm Street',
-         quantity: 5,
-         shippingFee: 15000,
-         total: 125000,
-         status: 'Thành công',
-         date: '21/02/2025',
-      },
-   ];
-
-   const filteredOrders = completedOrders.filter(
-      (order) =>
-         order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-         order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-         order.address.toLowerCase().includes(searchTerm.toLowerCase()),
-   );
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
 
    // Hàm xuất danh sách đơn hàng thành công dưới dạng Excel
    const exportOrdersToExcel = () => {
@@ -417,7 +367,6 @@ export default function FinancePage() {
       XLSX.writeFile(workbook, 'completed_orders.xlsx');
    };
 
-<<<<<<< HEAD
    // Hàm thiết lập tùy chọn cho biểu đồ
    const setupChartOptions = () => {
       setChartOptions({
@@ -490,6 +439,8 @@ export default function FinancePage() {
 
    // Nếu không có API lịch sử, chúng ta có thể tạo dữ liệu mẫu:
    const generateSampleHistoricalData = () => {
+      // Ghi chú: Đã lọc theo các trạng thái hợp lệ: 
+      // 'Hoàn thành', 'Đã hoàn thành đổi trả và hoàn tiền', 'Hoàn tiền thất bại', 'Đã từ chối đổi trả'
       let sampleData = [];
 
       if (timeFilter === 'month') {
@@ -627,8 +578,17 @@ export default function FinancePage() {
       });
    };
 
-=======
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
+   // Helper function to check if order status should be counted for revenue
+   const isRevenueCountableStatus = (status: string) => {
+      const validStatuses = [
+         'Hoàn thành',
+         'Đã hoàn thành đổi trả và hoàn tiền',
+         'Hoàn tiền thất bại',
+         'Đã từ chối đổi trả'
+      ];
+      return validStatuses.includes(status);
+   };
+
    return (
       <div className='flex h-screen bg-gray-50'>
          {/* Sidebar */}
@@ -656,7 +616,6 @@ export default function FinancePage() {
                               className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400'
                               size={18}
                            />
-<<<<<<< HEAD
                            <select
                               className='pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500'
                               value={timeFilter}
@@ -665,13 +624,6 @@ export default function FinancePage() {
                               <option value="week">Tuần này</option>
                               <option value="month">Tháng này</option>
                               <option value="year">Năm nay</option>
-=======
-                           <select className='pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500'>
-                              <option>Tháng này</option>
-                              <option>Tháng trước</option>
-                              <option>Quý này</option>
-                              <option>Năm nay</option>
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                            </select>
                         </div>
 
@@ -690,59 +642,34 @@ export default function FinancePage() {
                      <div className='flex space-x-8'>
                         <button
                            onClick={() => setCurrentTab('overview')}
-<<<<<<< HEAD
                            className={`pb-3 px-1 font-medium text-sm ${currentTab === 'overview'
                               ? 'border-b-2 border-amber-500 text-amber-600'
                               : 'text-gray-500 hover:text-gray-700'
                               }`}
-=======
-                           className={`pb-3 px-1 font-medium text-sm ${
-                              currentTab === 'overview'
-                                 ? 'border-b-2 border-amber-500 text-amber-600'
-                                 : 'text-gray-500 hover:text-gray-700'
-                           }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                         >
                            Tổng quan
                         </button>
                         <button
                            onClick={() => setCurrentTab('orders')}
-<<<<<<< HEAD
                            className={`pb-3 px-1 font-medium text-sm ${currentTab === 'orders'
                               ? 'border-b-2 border-amber-500 text-amber-600'
                               : 'text-gray-500 hover:text-gray-700'
                               }`}
-=======
-                           className={`pb-3 px-1 font-medium text-sm ${
-                              currentTab === 'orders'
-                                 ? 'border-b-2 border-amber-500 text-amber-600'
-                                 : 'text-gray-500 hover:text-gray-700'
-                           }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                         >
                            Đơn hàng
                         </button>
                         <button
                            onClick={() => setCurrentTab('customers')}
-<<<<<<< HEAD
                            className={`pb-3 px-1 font-medium text-sm ${currentTab === 'customers'
                               ? 'border-b-2 border-amber-500 text-amber-600'
                               : 'text-gray-500 hover:text-gray-700'
                               }`}
-=======
-                           className={`pb-3 px-1 font-medium text-sm ${
-                              currentTab === 'customers'
-                                 ? 'border-b-2 border-amber-500 text-amber-600'
-                                 : 'text-gray-500 hover:text-gray-700'
-                           }`}
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                         >
                            Khách hàng
                         </button>
                      </div>
                   </div>
 
-<<<<<<< HEAD
                   {/* Tab Content */}
                   {currentTab === 'overview' && (
                      <>
@@ -972,9 +899,13 @@ export default function FinancePage() {
                                                    {order.total.toLocaleString()} VND
                                                 </td>
                                                 <td className='py-3 px-4 text-sm'>
-                                                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${order.status === 'Đơn hàng vừa được tạo'
-                                                      ? 'bg-blue-100 text-blue-700'
-                                                      : 'bg-green-100 text-green-700'
+                                                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${order.status === 'Hoàn thành'
+                                                      ? 'bg-green-100 text-green-700'
+                                                      : order.status === 'Đã hoàn thành đổi trả và hoàn tiền'
+                                                         ? 'bg-blue-100 text-blue-700'
+                                                         : order.status === 'Hoàn tiền thất bại'
+                                                            ? 'bg-yellow-100 text-yellow-700'
+                                                            : 'bg-red-100 text-red-700'
                                                       }`}>
                                                       {order.status}
                                                    </span>
@@ -1045,194 +976,6 @@ export default function FinancePage() {
                         </section>
                      </>
                   )}
-=======
-                  {/* Stats Section */}
-                  <section className='mb-8'>
-                     <h2 className='text-lg font-semibold mb-4'>Tổng quan tài chính</h2>
-                     <div className='grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6'>
-                        {stats.map((stat, index) => (
-                           <div
-                              key={stat.id}
-                              className={`p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 ${
-                                 stat.bg
-                              } ${animateStats ? 'animate-fade-in' : 'opacity-0'}`}
-                              style={{ animationDelay: `${index * 100}ms` }}
-                           >
-                              <div className='flex items-center mb-3 justify-between'>
-                                 <div className='p-2 rounded-lg bg-white bg-opacity-70 shadow-sm'>
-                                    {stat.icon}
-                                 </div>
-                                 <span
-                                    className={`text-xs font-medium px-2 py-1 rounded-full ${
-                                       stat.trend.includes('+')
-                                          ? 'bg-green-100 text-green-700'
-                                          : 'bg-blue-100 text-blue-700'
-                                    }`}
-                                 >
-                                    {stat.trend}
-                                 </span>
-                              </div>
-                              <h3 className='text-sm text-gray-600 mb-1'>{stat.title}</h3>
-                              <p className='text-xl font-bold text-gray-800'>{stat.value}</p>
-                           </div>
-                        ))}
-                     </div>
-                  </section>
-
-                  {/* New Customers Section */}
-                  <section className='mb-8 bg-white p-6 rounded-xl shadow-sm'>
-                     <div className='flex justify-between items-center mb-6'>
-                        <div>
-                           <h2 className='text-lg font-semibold'>Khách hàng mới</h2>
-                           <p className='text-sm text-gray-600 mt-1'>
-                              {newCustomers.length} khách hàng mới trong tháng này
-                           </p>
-                        </div>
-                        <Link
-                           href='/seller/customers'
-                           className='text-amber-500 hover:text-amber-600 text-sm font-medium flex items-center'
-                        >
-                           Xem tất cả <ArrowRight className='ml-1' size={16} />
-                        </Link>
-                     </div>
-
-                     <div className='grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6'>
-                        {newCustomers.map((customer) => (
-                           <div
-                              key={customer.id}
-                              className='flex items-center p-3 rounded-lg hover:bg-gray-50 transition-all'
-                           >
-                              <div className='w-12 h-12 rounded-full overflow-hidden border border-gray-200'>
-                                 <Image
-                                    src={customer.image}
-                                    alt={customer.name}
-                                    width={48}
-                                    height={48}
-                                    className='object-cover'
-                                 />
-                              </div>
-                              <div className='ml-3'>
-                                 <p className='font-medium text-gray-800'>{customer.name}</p>
-                                 <p className='text-xs text-gray-500'>Mới tham gia</p>
-                              </div>
-                           </div>
-                        ))}
-                     </div>
-                  </section>
-
-                  {/* Completed Orders Section */}
-                  <section className='mb-8'>
-                     <div className='flex flex-col md:flex-row justify-between items-start md:items-center mb-6'>
-                        <div>
-                           <h2 className='text-lg font-semibold'>Danh sách đơn hàng thành công</h2>
-                           <p className='text-sm text-gray-600 mt-1'>
-                              Quản lý tất cả đơn hàng đã hoàn thành
-                           </p>
-                        </div>
-
-                        <div className='flex items-center gap-4 mt-4 md:mt-0'>
-                           <div className='relative'>
-                              <Search
-                                 className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400'
-                                 size={18}
-                              />
-                              <input
-                                 type='text'
-                                 placeholder='Tìm đơn hàng...'
-                                 value={searchTerm}
-                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                 className='pl-10 pr-4 py-2 border rounded-lg w-full md:w-64 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500'
-                              />
-                           </div>
-
-                           <button
-                              onClick={exportOrdersToExcel}
-                              className='flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-all'
-                           >
-                              <FileText size={18} />
-                              <span>Xuất Excel</span>
-                           </button>
-                        </div>
-                     </div>
-
-                     <div className='bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100'>
-                        <div className='overflow-x-auto'>
-                           <table className='min-w-full'>
-                              <thead>
-                                 <tr className='bg-gray-50 text-left'>
-                                    <th className='py-3 px-4 text-sm font-medium text-gray-600'>
-                                       STT
-                                    </th>
-                                    <th className='py-3 px-4 text-sm font-medium text-gray-600'>
-                                       Mã đơn hàng
-                                    </th>
-                                    <th className='py-3 px-4 text-sm font-medium text-gray-600'>
-                                       Khách hàng
-                                    </th>
-                                    <th className='py-3 px-4 text-sm font-medium text-gray-600'>
-                                       Địa chỉ
-                                    </th>
-                                    <th className='py-3 px-4 text-sm font-medium text-gray-600'>
-                                       Số lượng
-                                    </th>
-                                    <th className='py-3 px-4 text-sm font-medium text-gray-600'>
-                                       Phí vận chuyển
-                                    </th>
-                                    <th className='py-3 px-4 text-sm font-medium text-gray-600'>
-                                       Tổng thanh toán
-                                    </th>
-                                    <th className='py-3 px-4 text-sm font-medium text-gray-600'>
-                                       Ngày hoàn thành
-                                    </th>
-                                 </tr>
-                              </thead>
-                              <tbody className='divide-y divide-gray-200'>
-                                 {filteredOrders.length > 0 ? (
-                                    filteredOrders.map((order, index) => (
-                                       <tr
-                                          key={order.id}
-                                          className='hover:bg-gray-50 transition-colors'
-                                       >
-                                          <td className='py-3 px-4 text-sm text-gray-500'>
-                                             {index + 1}
-                                          </td>
-                                          <td className='py-3 px-4 text-sm font-medium text-amber-600'>
-                                             {order.orderId}
-                                          </td>
-                                          <td className='py-3 px-4 text-sm'>{order.customer}</td>
-                                          <td className='py-3 px-4 text-sm text-gray-500'>
-                                             {order.address}
-                                          </td>
-                                          <td className='py-3 px-4 text-sm'>{order.quantity}</td>
-                                          <td className='py-3 px-4 text-sm'>
-                                             {order.shippingFee.toLocaleString()} VND
-                                          </td>
-                                          <td className='py-3 px-4 text-sm font-medium'>
-                                             {order.total.toLocaleString()} VND
-                                          </td>
-                                          <td className='py-3 px-4 text-sm text-gray-500'>
-                                             {order.date}
-                                          </td>
-                                       </tr>
-                                    ))
-                                 ) : (
-                                    <tr>
-                                       <td colSpan={8} className='py-8 text-center text-gray-500'>
-                                          Không tìm thấy đơn hàng nào
-                                       </td>
-                                    </tr>
-                                 )}
-                              </tbody>
-                           </table>
-                        </div>
-                        {filteredOrders.length > 0 && (
-                           <div className='py-3 px-4 bg-gray-50 text-sm text-gray-500 border-t'>
-                              Hiển thị {filteredOrders.length} / {completedOrders.length} đơn hàng
-                           </div>
-                        )}
-                     </div>
-                  </section>
->>>>>>> 72c74480cfb4ac3d6b80fd3b31aba280a97a94c7
                </div>
             </main>
          </div>
