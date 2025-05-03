@@ -103,7 +103,11 @@ const orderStatusColors: Record<string, { bg: string; text: string; border: stri
    'Đơn hàng vừa được tạo': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
    'Đang chờ thanh toán': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
    'Thanh toán thất bại': { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
-   'Thanh toán thành công': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
+   'Thanh toán thành công': {
+      bg: 'bg-green-50',
+      text: 'text-green-700',
+      border: 'border-green-200',
+   },
    'Đang xử lý': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
    'Đã đặt hàng': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
    'Đang giao hàng': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
@@ -113,13 +117,29 @@ const orderStatusColors: Record<string, { bg: string; text: string; border: stri
    // Đổi trả hàng
    'Đổi trả hàng': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
    'Đã chấp nhận đổi trả': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
-   'Đã hoàn thành đổi trả và hoàn tiền': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
+   'Đã hoàn thành đổi trả và hoàn tiền': {
+      bg: 'bg-green-50',
+      text: 'text-green-700',
+      border: 'border-green-200',
+   },
    'Đã từ chối đổi trả': { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
 
    // Trả hàng hoàn tiền
-   'Trả hàng hoàn tiền': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
-   'Đang chờ hoàn tiền': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
-   'Hoàn tiền thành công': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
+   'Trả hàng hoàn tiền': {
+      bg: 'bg-yellow-50',
+      text: 'text-yellow-700',
+      border: 'border-yellow-200',
+   },
+   'Đang chờ hoàn tiền': {
+      bg: 'bg-yellow-50',
+      text: 'text-yellow-700',
+      border: 'border-yellow-200',
+   },
+   'Hoàn tiền thành công': {
+      bg: 'bg-green-50',
+      text: 'text-green-700',
+      border: 'border-green-200',
+   },
    'Hoàn tiền thất bại': { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
 };
 
@@ -142,7 +162,7 @@ const PaymentCountdown = ({
 }: {
    createdAt: string;
    orderId: number;
-   onTimeout: (orderId: number) => void;
+   onTimeout: (orderId: number, status: string) => void;
    status: string;
 }) => {
    const [timeLeft, setTimeLeft] = useState<number>(0);
@@ -153,7 +173,12 @@ const PaymentCountdown = ({
          const createdTime = new Date(createdAt).getTime();
          const now = new Date().getTime();
          const timePassed = now - createdTime;
-         const timeoutMs = 15 * 60 * 1000; // 15 minutes
+
+         // Đang chờ thanh toán: 15 phút
+         // Thanh toán thất bại: 1 ngày (24 giờ)
+         const timeoutMs = status === 'Đang chờ thanh toán'
+            ? 15 * 60 * 1000  // 15 minutes 
+            : 24 * 60 * 1000; // 24 hours
 
          const remaining = timeoutMs - timePassed;
          return Math.max(0, Math.floor(remaining / 1000)); // Return seconds left
@@ -166,7 +191,7 @@ const PaymentCountdown = ({
       // If time already expired, call onTimeout immediately
       if (initialTimeLeft <= 0 && !timedOut) {
          setTimedOut(true);
-         onTimeout(orderId);
+         onTimeout(orderId, status);
          return;
       }
 
@@ -179,30 +204,38 @@ const PaymentCountdown = ({
          if (remaining <= 0 && !timedOut) {
             clearInterval(timer);
             setTimedOut(true);
-            onTimeout(orderId);
+            onTimeout(orderId, status);
          }
       }, 1000);
 
       return () => clearInterval(timer);
-   }, [createdAt, orderId, onTimeout, timedOut]);
+   }, [createdAt, orderId, onTimeout, timedOut, status]);
 
    // Time expired
    if (timeLeft <= 0) {
       return <span className='text-red-600 text-sm font-medium'>Hết thời gian thanh toán</span>;
    }
 
-   // Display time remaining
-   const minutes = Math.floor(timeLeft / 60);
-   const seconds = timeLeft % 60;
-
-   return (
-      <span
-         className={`text-sm font-medium ${timeLeft < 300 ? 'text-red-600' : 'text-orange-600'}`}
-      >
-         {status === 'Đang chờ thanh toán' ? 'Thanh toán lại còn: ' : 'Thanh toán còn: '}
-         {minutes}:{seconds < 10 ? `0${seconds}` : seconds}
-      </span>
-   );
+   // Format the time differently based on status
+   if (status === 'Đang chờ thanh toán') {
+      // For waiting payment, show minutes and seconds
+      const minutes = Math.floor(timeLeft / 60);
+      const seconds = timeLeft % 60;
+      return (
+         <span className={`text-sm font-medium ${timeLeft < 180 ? 'text-red-600' : 'text-orange-600'}`}>
+            Thanh toán còn: {minutes}:{seconds < 10 ? `0${seconds}` : seconds}
+         </span>
+      );
+   } else {
+      // For failed payment, show hours and minutes
+      const hours = Math.floor(timeLeft / 3600);
+      const minutes = Math.floor((timeLeft % 3600) / 60);
+      return (
+         <span className={`text-sm font-medium ${timeLeft < 3600 ? 'text-red-600' : 'text-orange-600'}`}>
+            Thanh toán còn: {hours}h:{minutes < 10 ? `0${minutes}` : minutes}m
+         </span>
+      );
+   }
 };
 
 export default function OrderPage() {
@@ -224,7 +257,6 @@ export default function OrderPage() {
 
    // Add a new state to track which products have been fetched
    const [fetchedProducts, setFetchedProducts] = useState<Record<string, boolean>>({});
-
 
    const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
 
@@ -261,14 +293,11 @@ export default function OrderPage() {
                return;
             }
 
-            const response = await fetch(
-               `${HOST}/api/orders?user_id=${userId}`,
-               {
-                  headers: {
-                     Authorization: `Bearer ${token}`,
-                  },
+            const response = await fetch(`${HOST}/api/orders?user_id=${userId}`, {
+               headers: {
+                  Authorization: `Bearer ${token}`,
                },
-            );
+            });
 
             if (!response.ok) {
                throw new Error('Không thể tải danh sách đơn hàng');
@@ -323,14 +352,22 @@ export default function OrderPage() {
 
                         // Find the matching product detail
                         const matchingDetail = productData.details?.find(
-                           (detail: { id: number; size: string; type: string; values: string; quantities: number; isActive: boolean; images: Array<{ id: string; path: string; public_id: string }> }) => detail.id === item.product_detail_id
+                           (detail: {
+                              id: number;
+                              size: string;
+                              type: string;
+                              values: string;
+                              quantities: number;
+                              isActive: boolean;
+                              images: Array<{ id: string; path: string; public_id: string }>;
+                           }) => detail.id === item.product_detail_id,
                         );
 
                         // Set the product information
                         item.product = {
                            id: productData.id,
-                           name: productData.name || "Sản phẩm không tên",
-                           images: productData.images || []
+                           name: productData.name || 'Sản phẩm không tên',
+                           images: productData.images || [],
                         };
 
                         // If we found matching detail, store it
@@ -342,7 +379,7 @@ export default function OrderPage() {
                               values: matchingDetail.values,
                               quantities: matchingDetail.quantities,
                               isActive: matchingDetail.isActive,
-                              images: matchingDetail.images || []
+                              images: matchingDetail.images || [],
                            };
 
                            // Mark detail as fetched
@@ -360,10 +397,15 @@ export default function OrderPage() {
 
                         hasUpdates = true;
                      } else {
-                        console.error(`Error fetching product ${item.product_id}, status: ${productResponse.status}`);
+                        console.error(
+                           `Error fetching product ${item.product_id}, status: ${productResponse.status}`,
+                        );
                      }
                   } catch (productError) {
-                     console.error(`Failed to fetch product for product_id ${item.product_id}:`, productError);
+                     console.error(
+                        `Failed to fetch product for product_id ${item.product_id}:`,
+                        productError,
+                     );
                   }
                }
             }
@@ -380,8 +422,6 @@ export default function OrderPage() {
       },
       [fetchedDetails, fetchedProducts, statusFilter],
    );
-
-
 
    // Update useEffect with all dependencies
    useEffect(() => {
@@ -419,11 +459,14 @@ export default function OrderPage() {
 
    // Modified handleCancelOrder function to only allow cancellation in specific statuses
 
-
    // Within the OrderPage component, add this new function to handle completing the order
    const handleCompleteOrder = async (orderId: number) => {
       // Show warning confirmation dialog
-      if (!confirm('Khi bạn chọn Hoàn thành thì sẽ không thể đổi trả lại hàng, hãy quay clip và kiểm tra hàng trước khi chọn hoàn thành đơn. Bạn có chắc chắn muốn hoàn thành đơn hàng này?')) {
+      if (
+         !confirm(
+            'Khi bạn chọn Hoàn thành thì sẽ không thể đổi trả lại hàng, hãy quay clip và kiểm tra hàng trước khi chọn hoàn thành đơn. Bạn có chắc chắn muốn hoàn thành đơn hàng này?',
+         )
+      ) {
          return; // If user cancels, exit the function
       }
 
@@ -446,8 +489,8 @@ export default function OrderPage() {
                headers: {
                   Authorization: `Bearer ${token}`,
                   'Content-Type': 'application/json',
-               }
-            }
+               },
+            },
          );
 
          if (!response.ok) {
@@ -456,7 +499,9 @@ export default function OrderPage() {
 
          // Update the state after successful API call
          setOrders((prevOrders) =>
-            prevOrders.map((order) => (order.id === orderId ? { ...order, status: 'Hoàn thành' } : order))
+            prevOrders.map((order) =>
+               order.id === orderId ? { ...order, status: 'Hoàn thành' } : order,
+            ),
          );
 
          showToastMessage('Đơn hàng đã được hoàn thành', 'success');
@@ -475,10 +520,6 @@ export default function OrderPage() {
          setLoading(false);
       }
    };
-
-
-
-
 
    const handleFilterChange = useCallback((filterStatus: string | null) => {
       setStatusFilter(filterStatus);
@@ -527,100 +568,111 @@ export default function OrderPage() {
    // Thêm hàm này trong component OrderPage
 
    // Hàm cập nhật trạng thái đơn hàng khi hết thời gian thanh toán
-   const handlePaymentTimeout = useCallback(
-      async (orderId: number) => {
-         try {
-            const token = localStorage.getItem('token');
-            if (!token) return;
+   const handlePaymentTimeout = useCallback(async (orderId: number, currentStatus: string) => {
+      try {
+         const token = localStorage.getItem('token');
+         if (!token) return;
 
-            // First update to "Thanh toán thất bại"
-            const response = await fetch(
-               `${HOST}/api/orders/${orderId}/status`,
-               {
-                  method: 'PATCH',
-                  headers: {
-                     Authorization: `Bearer ${token}`,
-                     'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                     status: 'Thanh toán thất bại',
-                  }),
+         // Determine the next status based on current status
+         let nextStatus;
+         if (currentStatus === 'Đang chờ thanh toán') {
+            nextStatus = 'Thanh toán thất bại';
+         } else if (currentStatus === 'Thanh toán thất bại') {
+            nextStatus = 'Đã hủy';
+         } else {
+            return; // Exit if not a relevant status
+         }
+
+         const encodedStatus = encodeURIComponent(nextStatus);
+         const response = await fetch(
+            `${HOST}/api/orders/${orderId}/status?status=${encodedStatus}`,
+            {
+               method: 'PATCH',
+               headers: {
+                  Authorization: `Bearer ${token}`,
+                  'Content-Type': 'application/json',
                },
+            }
+         );
+
+         if (response.ok) {
+            // Update local state
+            setOrders((prevOrders) =>
+               prevOrders.map((order) =>
+                  order.id === orderId ? { ...order, status: nextStatus } : order
+               )
             );
 
-            if (response.ok) {
-               // Cập nhật state để hiển thị trạng thái mới
-               setOrders((prevOrders) =>
-                  prevOrders.map((order) =>
-                     order.id === orderId ? { ...order, status: 'Thanh toán thất bại' } : order,
-                  ),
+            if (nextStatus === 'Thanh toán thất bại') {
+               showToastMessage(
+                  `Đơn hàng #${orderId} đã hết thời gian thanh toán và chuyển sang trạng thái Thanh toán thất bại. Bạn còn 24h để thanh toán lại.`,
+                  'error'
                );
-
-               // Then update to "Đã hủy" after a short delay
-               setTimeout(async () => {
-                  const cancelResponse = await fetch(
-                     `${HOST}/api/orders/${orderId}/status`,
-                     {
-                        method: 'PATCH',
-                        headers: {
-                           Authorization: `Bearer ${token}`,
-                           'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                           status: 'Đã hủy',
-                        }),
-                     },
-                  );
-
-                  if (cancelResponse.ok) {
-                     setOrders((prevOrders) =>
-                        prevOrders.map((order) =>
-                           order.id === orderId ? { ...order, status: 'Đã hủy' } : order,
-                        ),
-                     );
-                  }
-               }, 1000); // Wait 1 second before updating to cancelled
-
-               // Hiển thị thông báo
-               showToastMessage(`Đơn hàng #${orderId} đã hết thời gian thanh toán`, 'error');
             } else {
-               console.error('Failed to update order status:', await response.text());
+               showToastMessage(
+                  `Đơn hàng #${orderId} đã quá hạn thanh toán và tự động hủy`,
+                  'error'
+               );
             }
-         } catch (error) {
-            console.error('Error handling payment timeout:', error);
+         } else {
+            console.error('Failed to update order status:', await response.text());
          }
-      },
-      [showToastMessage],
-   );
+      } catch (error) {
+         console.error('Error handling payment timeout:', error);
+      }
+   }, [showToastMessage]);
 
    // Thêm hàm kiểm tra các đơn hàng chưa thanh toán khi component mount
    const checkPendingPayments = useCallback(() => {
-      // Filter orders that are either newly created or waiting for payment (non-COD)
+      // Filter orders with "Đang chờ thanh toán" and "Thanh toán thất bại" statuses
       const pendingOrders = orders.filter(
-         (order) => (
-            (order.status === 'Đơn hàng vừa được tạo' || order.status === 'Đang chờ thanh toán')
-            && order.method_payment !== 'COD'
-         )
+         (order) => order.status === 'Đang chờ thanh toán' && order.method_payment !== 'COD'
+      );
+
+      const failedOrders = orders.filter(
+         (order) => order.status === 'Thanh toán thất bại' && order.method_payment !== 'COD'
       );
 
       if (pendingOrders.length > 0) {
-         // Show warning toast - only show when there are orders needing payment
+         // Show warning toast for pending orders
          showToastMessage(
-            'Lưu ý: Đơn hàng sẽ tự động hủy nếu không thanh toán trong vòng 15 phút',
-            'info',
+            'Lưu ý: Đơn hàng chưa thanh toán sẽ tự động chuyển sang Thanh toán thất bại sau 15 phút',
+            'info'
          );
       }
 
-      // Check for orders that have passed the payment deadline
+      if (failedOrders.length > 0) {
+         // Show warning toast for failed orders
+         showToastMessage(
+            'Lưu ý: Đơn hàng thanh toán thất bại sẽ tự động hủy sau 1 ngày nếu không thanh toán lại',
+            'info'
+         );
+      }
+
+      // Check orders that have passed the deadline
       const now = new Date().getTime();
+
+      // Check pending orders (15 minutes timeout)
       pendingOrders.forEach((order) => {
          const createdTime = new Date(order.createdAt).getTime();
          const timePassed = now - createdTime;
          const timeoutMs = 15 * 60 * 1000; // 15 minutes
 
          if (timePassed >= timeoutMs) {
-            // Automatically update status
-            handlePaymentTimeout(order.id);
+            console.log(`Order ${order.id} payment time (15min) has expired, updating status...`);
+            handlePaymentTimeout(order.id, 'Đang chờ thanh toán');
+         }
+      });
+
+      // Check failed payment orders (24 hours timeout)
+      failedOrders.forEach((order) => {
+         const createdTime = new Date(order.createdAt).getTime();
+         const timePassed = now - createdTime;
+         const timeoutMs = 24 * 60 * 60 * 1000; // 24 hours
+
+         if (timePassed >= timeoutMs) {
+            console.log(`Order ${order.id} extended payment time (24h) has expired, updating status...`);
+            handlePaymentTimeout(order.id, 'Thanh toán thất bại');
          }
       });
    }, [orders, handlePaymentTimeout, showToastMessage]);
@@ -659,8 +711,8 @@ export default function OrderPage() {
                   headers: {
                      Authorization: `Bearer ${token}`,
                      'Content-Type': 'application/json',
-                  }
-               }
+                  },
+               },
             );
 
             if (response.ok) {
@@ -691,18 +743,49 @@ export default function OrderPage() {
          setProcessingPaymentOrderId(orderId); // Set the processing order ID
 
          // Get the order to check its payment method
-         const orderToRetry = orders.find(order => order.id === orderId);
+         const orderToRetry = orders.find((order) => order.id === orderId);
          if (!orderToRetry) {
             showToastMessage('Không tìm thấy đơn hàng', 'error');
             return;
          }
+
+         // First update the order status to "Đang chờ thanh toán"
+         const token = localStorage.getItem('token');
+         if (!token) {
+            showToastMessage('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại', 'error');
+            router.push('/user/signin');
+            return;
+         }
+
+         // Update order status to "Đang chờ thanh toán"
+         const encodedStatus = encodeURIComponent('Đang chờ thanh toán');
+         const statusResponse = await fetch(
+            `${HOST}/api/orders/${orderId}/status?status=${encodedStatus}`,
+            {
+               method: 'PATCH',
+               headers: {
+                  Authorization: `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+               },
+            }
+         );
+
+         if (!statusResponse.ok) {
+            throw new Error('Không thể cập nhật trạng thái đơn hàng');
+         }
+
+         // Update local state
+         setOrders((prevOrders) =>
+            prevOrders.map((order) =>
+               order.id === orderId ? { ...order, status: 'Đang chờ thanh toán', createdAt: new Date().toISOString() } : order
+            )
+         );
 
          // Save the pending order ID in localStorage for verification after payment
          localStorage.setItem('pendingOrderId', orderId.toString());
 
          // Check if it's MOMO payment or other method
          if (orderToRetry.method_payment === 'MOMO') {
-            // For MOMO, get a new payment link and redirect
             try {
                const paymentLink = await retryOrderPayment(orderId);
 
@@ -714,7 +797,6 @@ export default function OrderPage() {
             } catch (error) {
                console.error('Error creating MOMO payment:', error);
                showToastMessage('Không thể tạo liên kết thanh toán MOMO', 'error');
-               setLoading(false);
             }
          } else if (orderToRetry.method_payment === 'BANKING') {
             // For BANKING, show banking information
@@ -759,7 +841,10 @@ export default function OrderPage() {
                      await loadOrders(parseInt(userId.toString()));
                   }
                } else {
-                  showToastMessage('Thanh toán thất bại. Vui lòng thử lại hoặc chọn phương thức khác', 'error');
+                  showToastMessage(
+                     'Thanh toán thất bại. Vui lòng thử lại hoặc chọn phương thức khác',
+                     'error',
+                  );
                }
             } catch (error) {
                console.error('Error verifying MOMO payment:', error);
@@ -799,7 +884,7 @@ export default function OrderPage() {
          setActionLoading(true);
 
          // Tìm đơn hàng hiện tại
-         const currentOrder = orders.find(order => order.id === selectedOrderId);
+         const currentOrder = orders.find((order) => order.id === selectedOrderId);
          if (!currentOrder) {
             showToastMessage('Không tìm thấy thông tin đơn hàng', 'error');
             setActionLoading(false);
@@ -813,7 +898,7 @@ export default function OrderPage() {
          } else if (actionType === 'exchange') {
             status = 'Đổi trả hàng';
          } else if (actionType === 'refund') {
-            status = 'Đang chờ hoàn tiền';  // Sửa thành "Trả hàng hoàn tiền" thay vì "Đang chờ hoàn tiền"
+            status = 'Đang chờ hoàn tiền'; // Sửa thành "Trả hàng hoàn tiền" thay vì "Đang chờ hoàn tiền"
          }
 
          const token = localStorage.getItem('token');
@@ -830,7 +915,7 @@ export default function OrderPage() {
 
          // Add files directly to the FormData with tên trường chính xác là 'images'
          if (files && files.length > 0) {
-            files.forEach(file => {
+            files.forEach((file) => {
                formData.append('images', file);
             });
          }
@@ -842,28 +927,27 @@ export default function OrderPage() {
          }
 
          // Send the request with FormData
-         const response = await fetch(
-            `${HOST}/api/orders/cancel-or-return/${selectedOrderId}`,
-            {
-               method: 'PATCH',
-               headers: {
-                  'Authorization': `Bearer ${token}`
-               },
-               body: formData
-            }
-         );
+         const response = await fetch(`${HOST}/api/orders/cancel-or-return/${selectedOrderId}`, {
+            method: 'PATCH',
+            headers: {
+               Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+         });
 
          if (!response.ok) {
             const errorData = await response.json();
             console.error('API error response:', errorData);
-            throw new Error(errorData.message || `API request failed with status ${response.status}`);
+            throw new Error(
+               errorData.message || `API request failed with status ${response.status}`,
+            );
          }
 
          // Update local state
-         setOrders(prevOrders =>
-            prevOrders.map(order =>
-               order.id === selectedOrderId ? { ...order, status } : order
-            )
+         setOrders((prevOrders) =>
+            prevOrders.map((order) =>
+               order.id === selectedOrderId ? { ...order, status } : order,
+            ),
          );
 
          setActionModalOpen(false);
@@ -873,7 +957,7 @@ export default function OrderPage() {
                : actionType === 'exchange'
                   ? 'Yêu cầu đổi/trả hàng đã được gửi'
                   : 'Yêu cầu trả hàng hoàn tiền đã được gửi',
-            'success'
+            'success',
          );
       } catch (error) {
          console.error('Error processing action:', error);
@@ -923,43 +1007,96 @@ export default function OrderPage() {
 
          {/* Add Breadcrumb navigation with status filter */}
          <div className='container mx-auto px-4 pt-4 pb-2'>
-            <nav className="flex" aria-label="Breadcrumb">
-               <ol className="inline-flex items-center space-x-1 md:space-x-3">
-                  <li className="inline-flex items-center">
-                     <Link href="/" className="inline-flex items-center text-sm text-gray-700 hover:text-orange-600">
-                        <svg className="w-3 h-3 mr-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                           <path d="m19.707 9.293-2-2-7-7a1 1 0 0 0-1.414 0l-7 7-2 2a1 1 0 0 0 1.414 1.414L2 10.414V18a2 2 0 0 0 2 2h3a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h3a2 2 0 0 0 2-2v-7.586l.293.293a1 1 0 0 0 1.414-1.414Z" />
+            <nav className='flex' aria-label='Breadcrumb'>
+               <ol className='inline-flex items-center space-x-1 md:space-x-3'>
+                  <li className='inline-flex items-center'>
+                     <Link
+                        href='/'
+                        className='inline-flex items-center text-sm text-gray-700 hover:text-orange-600'
+                     >
+                        <svg
+                           className='w-3 h-3 mr-2.5'
+                           aria-hidden='true'
+                           xmlns='http://www.w3.org/2000/svg'
+                           fill='currentColor'
+                           viewBox='0 0 20 20'
+                        >
+                           <path d='m19.707 9.293-2-2-7-7a1 1 0 0 0-1.414 0l-7 7-2 2a1 1 0 0 0 1.414 1.414L2 10.414V18a2 2 0 0 0 2 2h3a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h3a2 2 0 0 0 2-2v-7.586l.293.293a1 1 0 0 0 1.414-1.414Z' />
                         </svg>
                         Trang chủ
                      </Link>
                   </li>
                   <li>
-                     <div className="flex items-center">
-                        <svg className="w-3 h-3 text-gray-400 mx-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
-                           <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 9 4-4-4-4" />
+                     <div className='flex items-center'>
+                        <svg
+                           className='w-3 h-3 text-gray-400 mx-1'
+                           aria-hidden='true'
+                           xmlns='http://www.w3.org/2000/svg'
+                           fill='none'
+                           viewBox='0 0 6 10'
+                        >
+                           <path
+                              stroke='currentColor'
+                              strokeLinecap='round'
+                              strokeLinejoin='round'
+                              strokeWidth='2'
+                              d='m1 9 4-4-4-4'
+                           />
                         </svg>
-                        <Link href="/user/profile" className="ml-1 text-sm text-gray-700 hover:text-orange-600 md:ml-2">
+                        <Link
+                           href='/user/profile'
+                           className='ml-1 text-sm text-gray-700 hover:text-orange-600 md:ml-2'
+                        >
                            Tài khoản
                         </Link>
                      </div>
                   </li>
                   <li>
-                     <div className="flex items-center">
-                        <svg className="w-3 h-3 text-gray-400 mx-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
-                           <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 9 4-4-4-4" />
+                     <div className='flex items-center'>
+                        <svg
+                           className='w-3 h-3 text-gray-400 mx-1'
+                           aria-hidden='true'
+                           xmlns='http://www.w3.org/2000/svg'
+                           fill='none'
+                           viewBox='0 0 6 10'
+                        >
+                           <path
+                              stroke='currentColor'
+                              strokeLinecap='round'
+                              strokeLinejoin='round'
+                              strokeWidth='2'
+                              d='m1 9 4-4-4-4'
+                           />
                         </svg>
-                        <Link href="/user/order" className="ml-1 text-sm text-gray-700 hover:text-orange-600 md:ml-2">
+                        <Link
+                           href='/user/order'
+                           className='ml-1 text-sm text-gray-700 hover:text-orange-600 md:ml-2'
+                        >
                            Đơn hàng của tôi
                         </Link>
                      </div>
                   </li>
                   {statusFilter && (
-                     <li aria-current="page">
-                        <div className="flex items-center">
-                           <svg className="w-3 h-3 text-gray-400 mx-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
-                              <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 9 4-4-4-4" />
+                     <li aria-current='page'>
+                        <div className='flex items-center'>
+                           <svg
+                              className='w-3 h-3 text-gray-400 mx-1'
+                              aria-hidden='true'
+                              xmlns='http://www.w3.org/2000/svg'
+                              fill='none'
+                              viewBox='0 0 6 10'
+                           >
+                              <path
+                                 stroke='currentColor'
+                                 strokeLinecap='round'
+                                 strokeLinejoin='round'
+                                 strokeWidth='2'
+                                 d='m1 9 4-4-4-4'
+                              />
                            </svg>
-                           <span className="ml-1 text-sm font-medium text-orange-600 md:ml-2">{statusFilter}</span>
+                           <span className='ml-1 text-sm font-medium text-orange-600 md:ml-2'>
+                              {statusFilter}
+                           </span>
                         </div>
                      </li>
                   )}
@@ -1046,7 +1183,8 @@ export default function OrderPage() {
                               </p>
 
                               {/* Add countdown timer for both newly created and waiting for payment status */}
-                              {(order.status === 'Đơn hàng vừa được tạo' || order.status === 'Đang chờ thanh toán') &&
+                              {(order.status === 'Đơn hàng vừa được tạo' ||
+                                 order.status === 'Đang chờ thanh toán') &&
                                  order.method_payment !== 'COD' && (
                                     <PaymentCountdown
                                        createdAt={order.createdAt}
@@ -1055,6 +1193,29 @@ export default function OrderPage() {
                                        status={order.status}
                                     />
                                  )}
+                              {/* Countdown timer for "Đang chờ thanh toán" status */}
+                              {order.status === 'Đang chờ thanh toán' &&
+                                 order.method_payment !== 'COD' && (
+                                    <PaymentCountdown
+                                       createdAt={order.createdAt}
+                                       orderId={order.id}
+                                       onTimeout={handlePaymentTimeout}
+                                       status={order.status}
+                                    />
+                                 )
+                              }
+
+                              {/* Countdown timer for "Thanh toán thất bại" status */}
+                              {order.status === 'Thanh toán thất bại' &&
+                                 order.method_payment !== 'COD' && (
+                                    <PaymentCountdown
+                                       createdAt={order.createdAt}
+                                       orderId={order.id}
+                                       onTimeout={handlePaymentTimeout}
+                                       status={order.status}
+                                    />
+                                 )
+                              }
                            </div>
                            <div className='flex items-center'>
                               {order.method_payment && (
@@ -1181,36 +1342,53 @@ export default function OrderPage() {
                                     Chi tiết
                                  </Link>
 
-                                 {/* Retry Payment button - chỉ hiển thị khi đơn hàng đang chờ thanh toán và còn trong thời gian cho phép */}
-                                 {order.status === 'Đang chờ thanh toán' && (() => {
-                                    const createdTime = new Date(order.createdAt).getTime();
-                                    const now = new Date().getTime();
-                                    const timePassed = now - createdTime;
-                                    const timeoutMs = 15 * 60 * 1000; // 15 phút
+                                 {/* Retry Payment button - hiển thị cho cả trạng thái Đang chờ thanh toán và Thanh toán thất bại */}
+                                 {(order.status === 'Đang chờ thanh toán' || order.status === 'Thanh toán thất bại') &&
+                                    (() => {
+                                       const createdTime = new Date(order.createdAt).getTime();
+                                       const now = new Date().getTime();
+                                       const timePassed = now - createdTime;
+                                       const timeoutMs = 24 * 60 * 60 * 1000; // 1 ngày (24 giờ)
 
-                                    if (timePassed < timeoutMs) {
-                                       return (
-                                          <button
-                                             onClick={() => handleRetryPayment(order.id)}
-                                             disabled={processingPaymentOrderId === order.id}
-                                             className='text-sm text-blue-600 border border-blue-300 bg-white hover:bg-blue-50 px-3 py-1 rounded flex items-center'
-                                          >
-                                             {processingPaymentOrderId === order.id ? (
-                                                <>
-                                                   <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                   </svg>
-                                                   Đang xử lý...
-                                                </>
-                                             ) : (
-                                                'Thanh toán lại'
-                                             )}
-                                          </button>
-                                       );
-                                    }
-                                    return null;
-                                 })()}
+                                       if (timePassed < timeoutMs) {
+                                          return (
+                                             <button
+                                                onClick={() => handleRetryPayment(order.id)}
+                                                disabled={processingPaymentOrderId === order.id}
+                                                className='text-sm text-blue-600 border border-blue-300 bg-white hover:bg-blue-50 px-3 py-1 rounded flex items-center'
+                                             >
+                                                {processingPaymentOrderId === order.id ? (
+                                                   <>
+                                                      <svg
+                                                         className='animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600'
+                                                         xmlns='http://www.w3.org/2000/svg'
+                                                         fill='none'
+                                                         viewBox='0 0 24 24'
+                                                      >
+                                                         <circle
+                                                            className='opacity-25'
+                                                            cx='12'
+                                                            cy='12'
+                                                            r='10'
+                                                            stroke='currentColor'
+                                                            strokeWidth='4'
+                                                         ></circle>
+                                                         <path
+                                                            className='opacity-75'
+                                                            fill='currentColor'
+                                                            d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                                                         ></path>
+                                                      </svg>
+                                                      Đang xử lý...
+                                                   </>
+                                                ) : (
+                                                   'Thanh toán lại'
+                                                )}
+                                             </button>
+                                          );
+                                       }
+                                       return null;
+                                    })()}
 
                                  {/* Nút hủy đơn - chỉ hiển thị ở các trạng thái phù hợp */}
                                  {(order.status === 'Đơn hàng vừa được tạo' ||
@@ -1253,14 +1431,15 @@ export default function OrderPage() {
                                  )}
 
                                  {/* Show Review button */}
-                                 {(order.status === 'Hoàn thành' || order.status === 'Đổi trả thành công') && (
-                                    <Link
-                                       href={`/user/order/rating`}
-                                       className='text-sm text-green-600 border border-green-300 bg-white hover:bg-green-50 px-3 py-1 rounded'
-                                    >
-                                       Đánh giá
-                                    </Link>
-                                 )}
+                                 {(order.status === 'Hoàn thành' ||
+                                    order.status === 'Đổi trả thành công') && (
+                                       <Link
+                                          href={`/user/order/rating`}
+                                          className='text-sm text-green-600 border border-green-300 bg-white hover:bg-green-50 px-3 py-1 rounded'
+                                       >
+                                          Đánh giá
+                                       </Link>
+                                    )}
                               </div>
                            </div>
                         </div>
@@ -1270,7 +1449,7 @@ export default function OrderPage() {
             )}
             {/* Pagination Controls */}
             {filteredOrders.length > 0 && (
-               <div className="flex items-center justify-center mt-6 space-x-2">
+               <div className='flex items-center justify-center mt-6 space-x-2'>
                   <button
                      onClick={() => paginate(currentPage - 1)}
                      disabled={currentPage === 1}
@@ -1279,13 +1458,13 @@ export default function OrderPage() {
                         : 'bg-white text-gray-700 hover:bg-gray-50'
                         }`}
                   >
-                     <ChevronLeftIcon className="w-4 h-4 mr-1" />
+                     <ChevronLeftIcon className='w-4 h-4 mr-1' />
                      Trước
                   </button>
 
                   {/* Page Numbers */}
-                  <div className="flex items-center space-x-1">
-                     {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNumber => (
+                  <div className='flex items-center space-x-1'>
+                     {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => (
                         <button
                            key={pageNumber}
                            onClick={() => paginate(pageNumber)}
@@ -1308,7 +1487,7 @@ export default function OrderPage() {
                         }`}
                   >
                      Tiếp
-                     <ChevronRightIcon className="w-4 h-4 ml-1" />
+                     <ChevronRightIcon className='w-4 h-4 ml-1' />
                   </button>
                </div>
             )}
