@@ -110,10 +110,8 @@ export default function EditProduct() {
    const [categoryError, setCategoryError] = useState('');
    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
    const [detailImagesCache, setDetailImagesCache] = useState<Record<number, Image[]>>({});
-
-   // Variant management
+   const [variantImageUploading, setVariantImageUploading] = useState<number | null>(null);
    const [variantsToDelete, setVariantsToDelete] = useState<number[]>([]);
-   // Update the newVariants state type to include promotion dates
    const [newVariants, setNewVariants] = useState<
       {
          size: string;
@@ -168,7 +166,7 @@ export default function EditProduct() {
 
             const response = await fetch(`${HOST}/api/products/${productId}`, {
                headers: {
-                  Authorization: `Bearer ${token}`,
+                  Authorization: `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}`,
                },
             });
 
@@ -245,7 +243,7 @@ export default function EditProduct() {
 
          const response = await fetch(`${HOST}/api/categories`, {
             headers: {
-               Authorization: `Bearer ${token}`,
+               Authorization: `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}`,
                'Content-Type': 'application/json',
             },
          });
@@ -506,15 +504,25 @@ export default function EditProduct() {
       }));
    };
 
-   // Handle variant changes
    const handleVariantChange = (index: number, field: string, value: string | number | boolean) => {
       if (!product) return;
 
       const updatedDetails = [...product.details];
-      updatedDetails[index] = {
-         ...updatedDetails[index],
-         [field]: value,
-      };
+
+      // Xử lý đặc biệt cho trường hợp quantities
+      if (field === 'quantities') {
+         // Đảm bảo giá trị là số hợp lệ
+         const numericValue = typeof value === 'string' ? parseInt(value) : value;
+         updatedDetails[index] = {
+            ...updatedDetails[index],
+            quantities: isNaN(numericValue as number) ? 0 : numericValue as number,
+         };
+      } else {
+         updatedDetails[index] = {
+            ...updatedDetails[index],
+            [field]: value,
+         };
+      }
 
       setProduct({
          ...product,
@@ -595,14 +603,71 @@ export default function EditProduct() {
    };
 
    // Mark variant for deletion
-   const markVariantForDeletion = (id: number) => {
-      setVariantsToDelete((prev) => [...prev, id]);
+   const markVariantForDeletion = async (detailId: number) => {
+      if (confirm('Bạn có chắc chắn muốn xóa phiên bản này không? Hành động này không thể hoàn tác.')) {
+         try {
+            showToast('Đang xóa phiên bản...', 'info');
+
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            if (!token) {
+               showToast('Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn', 'error');
+               return;
+            }
+
+            const response = await fetch(`${HOST}/api/product-details/${detailId}`, {
+               method: 'DELETE',
+               headers: {
+                  Authorization: `Bearer ${token}`
+               }
+            });
+
+            if (!response.ok) {
+               const errorText = await response.text();
+               console.error(`Failed to delete product detail (${response.status}): ${errorText}`);
+               throw new Error(`Không thể xóa phiên bản: ${response.statusText}`);
+            }
+
+            // Remove the deleted detail from the product state
+            setProduct(prevProduct => {
+               if (!prevProduct) return null;
+
+               return {
+                  ...prevProduct,
+                  details: prevProduct.details.filter(detail => detail.id !== detailId)
+               };
+            });
+
+            // Also remove any prices associated with this detail
+            setDetailPrices(prev => {
+               const updated = { ...prev };
+               delete updated[detailId];
+               return updated;
+            });
+
+            // Remove from image cache if exists
+            setDetailImagesCache(prev => {
+               const updated = { ...prev };
+               delete updated[detailId];
+               return updated;
+            });
+
+            showToast('Đã xóa phiên bản thành công', 'success');
+
+         } catch (error) {
+            console.error('Error deleting product detail:', error);
+            showToast(
+               `Lỗi xóa phiên bản: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`,
+               'error'
+            );
+            // Still mark for deletion in UI if API call fails, so it gets deleted during save
+            setVariantsToDelete(prev => [...prev, detailId]);
+         }
+      } else {
+         // If user cancels the confirmation, just mark for deletion in UI
+         setVariantsToDelete(prev => [...prev, detailId]);
+      }
    };
 
-   // Restore variant from deletion
-   const restoreVariant = (id: number) => {
-      setVariantsToDelete((prev) => prev.filter((variantId) => variantId !== id));
-   };
 
    const handleProductImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files.length > 0) {
@@ -774,24 +839,109 @@ export default function EditProduct() {
       }
    };
 
-   // Thêm hàm xử lý việc tải lên hình ảnh cho chi tiết sản phẩm
-   const handleVariantImageUpload = (detailId: number, e: ChangeEvent<HTMLInputElement>) => {
+   // Improved handleVariantImageUpload function with automatic upload
+   const handleVariantImageUpload = async (detailId: number, e: ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files.length > 0) {
-         const filesArray = Array.from(e.target.files);
-         setVariantImageUploads((prev) => ({
-            ...prev,
-            [detailId]: [...(prev[detailId] || []), ...filesArray],
-         }));
-      }
-   };
+         try {
+            setVariantImageUploading(detailId);
+            // Store files temporarily and show pending upload state
+            const filesArray = Array.from(e.target.files);
+            setVariantImageUploads((prev) => ({
+               ...prev,
+               [detailId]: [...(prev[detailId] || []), ...filesArray],
+            }));
 
-   // Hàm xóa hình ảnh trước khi tải lên
-   const removeVariantUploadImage = (detailId: number, imageIndex: number) => {
-      setVariantImageUploads((prev) => {
-         const updatedFiles = [...(prev[detailId] || [])];
-         updatedFiles.splice(imageIndex, 1);
-         return { ...prev, [detailId]: updatedFiles };
-      });
+            showToast(`Đang tải lên hình ảnh cho phiên bản...`, 'info');
+
+            // Get authentication token
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            if (!token) {
+               showToast('Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn', 'error');
+               return;
+            }
+
+            // Create FormData for the upload
+            const formData = new FormData();
+            filesArray.forEach((file) => {
+               formData.append('images', file);
+            });
+
+            // Upload the images immediately
+            const response = await fetch(
+               `${HOST}/api/product-details/${detailId}`,
+               {
+                  method: 'PATCH',
+                  headers: {
+                     Authorization: `Bearer ${token}`,
+                  },
+                  body: formData,
+               }
+            );
+
+            if (!response.ok) {
+               const errorText = await response.text();
+               console.error(`Image upload failed (${response.status}): ${errorText}`);
+               showToast(`Không thể tải lên hình ảnh: ${response.statusText}`, 'error');
+               return;
+            }
+
+            // Parse the response to get updated images
+            const updatedDetail = await response.json();
+            console.log('Images uploaded successfully:', updatedDetail);
+
+            // Clear the upload queue for this detail
+            setVariantImageUploads(prev => {
+               const updated = { ...prev };
+               delete updated[detailId];
+               return updated;
+            });
+
+            // Update UI with the new images
+            if (updatedDetail && updatedDetail.images) {
+               // Update cache with fresh data
+               setDetailImagesCache(prev => ({
+                  ...prev,
+                  [detailId]: updatedDetail.images
+               }));
+
+               // Update product state
+               setProduct(prevProduct => {
+                  if (!prevProduct) return null;
+
+                  const updatedDetails = prevProduct.details.map(detail => {
+                     if (detail.id === detailId) {
+                        return {
+                           ...detail,
+                           images: updatedDetail.images
+                        };
+                     }
+                     return detail;
+                  });
+
+                  return {
+                     ...prevProduct,
+                     details: updatedDetails
+                  };
+               });
+
+               // Update timestamp and force re-render
+               setLastImageFetchTime(prev => ({
+                  ...prev,
+                  [detailId]: Date.now()
+               }));
+            }
+
+            showToast('Đã tải lên hình ảnh thành công', 'success');
+         } catch (error) {
+            console.error('Error uploading variant images:', error);
+            showToast(
+               `Lỗi tải lên hình ảnh: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`,
+               'error'
+            );
+         } finally {
+            setVariantImageUploading(null);
+         }
+      }
    };
 
    // Add a helper function to format date input
@@ -914,7 +1064,6 @@ export default function EditProduct() {
             description: formData.description,
             video: formData.video,
             category_id: formData.category_id,
-            variants_to_delete: variantsToDelete,
             keep_existing_images: true,
          };
 
@@ -951,44 +1100,14 @@ export default function EditProduct() {
             // Trong handleSubmit, thay thế phần cập nhật chi tiết:
             for (const detail of detailsToUpdate) {
                try {
-                  // Chuẩn bị dữ liệu cập nhật
-                  const detailData = {
-                     size: String(detail.size || ''),
-                     type: String(detail.type || ''),
-                     values: String(detail.values || ''),
-                     quantities: Number(detail.quantities || 0),
-                     isActive: Boolean(detail.isActive),
-                     // Thêm trường này để API backend biết đây là cập nhật không có hình ảnh
-                  };
+                  console.log(`Đang cập nhật chi tiết ID ${detail.id}`);
+                  const success = await updateProductDetail(detail);
 
-                  console.log(`Đang cập nhật chi tiết ID ${detail.id} với:`, detailData);
-
-                  // Gọi API cập nhật chi tiết sản phẩm
-                  const detailRes = await fetch(
-                     `${HOST}/api/product-details/${detail.id}`,
-                     {
-                        method: 'PATCH',
-                        headers: {
-                           Authorization: `Bearer ${token}`,
-                           'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(detailData),
-                     },
-                  );
-
-                  // Log kết quả
-                  if (!detailRes.ok) {
-                     const errorText = await detailRes.text();
-                     console.error(
-                        `Chi tiết cập nhật thất bại cho ID ${detail.id} (${detailRes.status}):`,
-                        errorText,
-                     );
-                     showToast(
-                        `Chi tiết ID ${detail.id} không cập nhật được: ${detailRes.statusText}`,
-                        'error',
-                     );
-                  } else {
+                  if (success) {
                      console.log(`Chi tiết ${detail.id} cập nhật thành công`);
+                  } else {
+                     console.error(`Chi tiết cập nhật thất bại cho ID ${detail.id}`);
+                     showToast(`Chi tiết ID ${detail.id} không cập nhật được`, 'error');
                   }
 
                   // Thêm độ trễ nhỏ để giảm tải cho server
@@ -1216,61 +1335,6 @@ export default function EditProduct() {
       }
    };
 
-   // Thêm hàm này vào component EditProduct
-   // const fetchDetailImages = async (detailId: number) => {
-   //    console.log('Fetching images for detail ID:', detailId);
-
-   //    try {
-   //       // Bỏ qua nếu đã có trong cache
-   //       if (detailImagesCache[detailId]?.length > 0) {
-   //          console.log('Images already in cache for detail ID:', detailId);
-   //          return detailImagesCache[detailId];
-   //       }
-
-   //       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-   //       if (!token) {
-   //          console.log('No authentication token found');
-   //          return null;
-   //       }
-
-   //       const response = await fetch(
-   //          ``${HOST}`/api/product-details/${detailId}`,
-   //          {
-   //             headers: {
-   //                Authorization: `Bearer ${token}`,
-   //             },
-   //          }
-   //       );
-
-   //       console.log('API response status:', response.status);
-
-   //       if (!response.ok) {
-   //          console.error(`Failed to fetch detail images: ${response.status}`);
-   //          return null;
-   //       }
-
-   //       const detailData = await response.json();
-   //       console.log('Detail data received:', detailData);
-
-   //       if (detailData && detailData.images && detailData.images.length > 0) {
-   //          console.log(`Found ${detailData.images.length} images for detail ID ${detailId}`);
-
-   //          // Cập nhật cache hình ảnh
-   //          setDetailImagesCache(prev => ({
-   //             ...prev,
-   //             [detailId]: detailData.images
-   //          }));
-
-   //          return detailData.images;
-   //       } else {
-   //          console.log('No images found for detail');
-   //          return [];
-   //       }
-   //    } catch (error) {
-   //       console.error('Error fetching detail images:', error);
-   //       return null;
-   //    }
-   // };
 
    // Thêm hàm này vào component của bạn
    const removeDetailImage = async (detailId: number, imageId: string) => {
@@ -1355,7 +1419,7 @@ export default function EditProduct() {
             {
                headers: {
                   Authorization: `Bearer ${token}`,
-               },
+               }
             }
          );
 
@@ -1399,6 +1463,52 @@ export default function EditProduct() {
       } catch (error) {
          console.error('Error fetching detail images:', error);
          return null;
+      }
+   };
+
+   // Thay thế cách cập nhật thông tin product-details
+   const updateProductDetail = async (detail: ProductDetail) => {
+      try {
+         // Lấy token từ localStorage hoặc sessionStorage
+         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+         if (!token) return false;
+
+         // Sử dụng FormData thay vì JSON
+         const formData = new FormData();
+
+         // Thêm các trường thông tin như form fields
+         formData.append('size', String(detail.size || ''));
+         formData.append('type', String(detail.type || ''));
+         formData.append('values', String(detail.values || ''));
+         formData.append('quantities', String(detail.quantities || 0));
+         formData.append('isActive', detail.isActive ? 'true' : 'false');
+
+         // Đánh dấu đây là cập nhật thông tin không có hình ảnh
+         formData.append('update_info_only', 'true');
+
+         const response = await fetch(
+            `${HOST}/api/product-details/${detail.id}`,
+            {
+               method: 'PATCH',
+               headers: {
+                  Authorization: `Bearer ${token}`,
+                  // Không set Content-Type cho FormData
+               },
+               body: formData,
+            }
+         );
+
+         // Xử lý phản hồi
+         if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Detail update failed (${response.status}): ${errorText}`);
+            return false;
+         }
+
+         return true;
+      } catch (error) {
+         console.error(`Error updating detail:`, error);
+         return false;
       }
    };
 
@@ -1792,28 +1902,14 @@ export default function EditProduct() {
                                              : ''
                                              }`}
                                        >
-                                          {variantsToDelete.includes(detail.id) ? (
-                                             <div className='mb-4 bg-red-100 text-red-800 p-3 rounded-md flex items-center'>
-                                                <TrashIcon className='h-5 w-5 mr-2' />
-                                                <span>Phiên bản này sẽ bị xóa</span>
-                                                <button
-                                                   type='button'
-                                                   onClick={() => restoreVariant(detail.id)}
-                                                   className='ml-auto text-red-800 hover:text-red-900 flex items-center'
-                                                >
-                                                   <ArrowPathIcon className='h-4 w-4 mr-1' />
-                                                   <span>Khôi phục</span>
-                                                </button>
-                                             </div>
-                                          ) : (
-                                             <button
-                                                type='button'
-                                                onClick={() => markVariantForDeletion(detail.id)}
-                                                className='float-right text-gray-500 hover:text-red-600'
-                                             >
-                                                <TrashIcon className='h-5 w-5' />
-                                             </button>
-                                          )}
+                                          <button
+                                             type="button"
+                                             onClick={() => markVariantForDeletion(detail.id)}
+                                             className="float-right text-gray-500 hover:text-red-600 flex items-center"
+                                          >
+                                             <TrashIcon className="h-5 w-5 mr-1" />
+                                             <span className="text-sm">Xóa</span>
+                                          </button>
 
                                           <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-4'>
                                              <div>
@@ -1888,12 +1984,12 @@ export default function EditProduct() {
                                                 </label>
                                                 <input
                                                    type='number'
-                                                   value={detail.quantities}
+                                                   value={isNaN(detail.quantities) ? '' : detail.quantities}
                                                    onChange={(e) =>
                                                       handleVariantChange(
                                                          index,
                                                          'quantities',
-                                                         parseInt(e.target.value),
+                                                         parseInt(e.target.value) || 0,  // Đảm bảo luôn trả về số
                                                       )
                                                    }
                                                    min='0'
@@ -2038,13 +2134,16 @@ export default function EditProduct() {
                                                          <div className='aspect-square overflow-hidden rounded-md border border-gray-200'>
                                                             <Image
                                                                src={image.path}
-                                                               alt={`Variant image ${imgIndex + 1}`}
-                                                               width={100}
-                                                               height={100}
+                                                               alt={`Product image ${index + 1}`}
+                                                               width={200}
+                                                               height={200}
                                                                className='w-full h-full object-cover'
                                                                onError={(e) => {
-                                                                  console.error(`Error loading image: ${image.path}`);
-                                                                  e.currentTarget.src = '/placeholder-image.jpg';
+                                                                  console.error(
+                                                                     `Error loading image: ${image.path}`,
+                                                                  );
+                                                                  e.currentTarget.src =
+                                                                     '/placeholder-image.jpg';
                                                                }}
                                                             />
                                                          </div>
@@ -2094,100 +2193,35 @@ export default function EditProduct() {
 
                                              {/* Input để tải lên hình ảnh mới */}
                                              {!variantsToDelete.includes(detail.id) && (
-                                                <>
-                                                   <div className='mt-2'>
-                                                      <label className='flex items-center justify-center w-24 h-24 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:bg-gray-50'>
+                                                <div className='mt-2'>
+                                                   <label className={`flex items-center justify-center w-24 h-24 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:bg-gray-50 ${variantImageUploading === detail.id ? 'opacity-50 pointer-events-none' : ''}`}>
+                                                      {variantImageUploading === detail.id ? (
+                                                         <div className='space-y-1 text-center'>
+                                                            <ArrowPathIcon className='mx-auto h-6 w-6 text-amber-500 animate-spin' />
+                                                            <div className='text-xs text-gray-500'>
+                                                               <span>Đang tải...</span>
+                                                            </div>
+                                                         </div>
+                                                      ) : (
                                                          <div className='space-y-1 text-center'>
                                                             <PhotoIcon className='mx-auto h-6 w-6 text-gray-400' />
                                                             <div className='text-xs text-gray-500'>
-                                                               <span>Thêm ảnh</span>
+                                                               <span>Chọn ảnh</span>
                                                             </div>
                                                          </div>
-                                                         <input
-                                                            type='file'
-                                                            className='hidden'
-                                                            accept='image/*'
-                                                            multiple
-                                                            onChange={(e) =>
-                                                               handleVariantImageUpload(
-                                                                  detail.id,
-                                                                  e,
-                                                               )
-                                                            }
-                                                         />
-                                                      </label>
-                                                   </div>
-
-                                                   {/* Hiển thị hình ảnh đã chọn để tải lên */}
-                                                   {variantImageUploads[detail.id]?.length > 0 && (
-                                                      <div className='mt-3'>
-                                                         <h5 className='text-xs font-medium text-gray-700 mb-2'>
-                                                            Sẽ tải lên:
-                                                         </h5>
-                                                         <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3'>
-                                                            {variantImageUploads[detail.id].map(
-                                                               (file, imgIndex) => (
-                                                                  <div key={imgIndex} className='relative group'>
-                                                                     <div className='aspect-square overflow-hidden rounded-md border border-gray-200'>
-                                                                        <Image
-                                                                           src={URL.createObjectURL(file)}
-                                                                           alt={`New variant image ${imgIndex + 1}`}
-                                                                           width={100}
-                                                                           height={100}
-                                                                           className='w-full h-full object-cover'
-                                                                        />
-                                                                     </div>
-                                                                     <button
-                                                                        type='button'
-                                                                        onClick={() => removeVariantUploadImage(detail.id, imgIndex)}
-                                                                        className='absolute top-1 right-1 bg-white rounded-full p-1 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity'
-                                                                     >
-                                                                        <XMarkIcon className='h-3 w-3 text-gray-500' />
-                                                                     </button>
-                                                                  </div>
-                                                               ),
-                                                            )}
-                                                         </div>
-                                                      </div>
-                                                   )}
-                                                </>
+                                                      )}
+                                                      <input
+                                                         type='file'
+                                                         className='hidden'
+                                                         accept='image/*'
+                                                         multiple
+                                                         disabled={variantImageUploading === detail.id}
+                                                         onChange={(e) => handleVariantImageUpload(detail.id, e)}
+                                                      />
+                                                   </label>
+                                                </div>
                                              )}
                                           </div>
-
-                                          {/* Nút cập nhật */}
-                                          {!variantsToDelete.includes(detail.id) && (
-                                             <div className='mt-4 border-t pt-4'>
-                                                <div className='flex justify-end space-x-2'>
-                                                   {variantImageUploads[detail.id]?.length > 0 && (
-                                                      <button
-                                                         type='button'
-                                                         onClick={async () => {
-                                                            const success =
-                                                               await uploadDetailImages(
-                                                                  detail.id,
-                                                                  variantImageUploads[detail.id],
-                                                               );
-                                                            if (success) {
-                                                               showToast(
-                                                                  'Đã tải lên hình ảnh cho phiên bản thành công',
-                                                                  'success',
-                                                               );
-                                                               setVariantImageUploads((prev) => {
-                                                                  const updated = { ...prev };
-                                                                  delete updated[detail.id];
-                                                                  return updated;
-                                                               });
-                                                               await refetchProductDetails();
-                                                            }
-                                                         }}
-                                                         className='px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 focus:outline-none'
-                                                      >
-                                                         Tải ảnh lên
-                                                      </button>
-                                                   )}
-                                                </div>
-                                             </div>
-                                          )}
                                        </div>
                                     ))}
                                  </div>
@@ -2282,12 +2316,12 @@ export default function EditProduct() {
                                                 </label>
                                                 <input
                                                    type='number'
-                                                   value={variant.quantities}
+                                                   value={isNaN(variant.quantities) ? '' : variant.quantities}
                                                    onChange={(e) =>
                                                       handleNewVariantChange(
                                                          index,
                                                          'quantities',
-                                                         parseInt(e.target.value),
+                                                         parseInt(e.target.value) || 0,
                                                       )
                                                    }
                                                    min='0'
