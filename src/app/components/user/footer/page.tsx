@@ -70,8 +70,8 @@ export default function Footer() {
                         { href: '/user/termsofuse', text: 'Điều khoản sử dụng' },
                         { href: '/user/privacypolicy', text: 'Chính sách bảo mật' },
                         { href: '/user/paymentmethod', text: 'Hình thức thanh toán' },
-                        { href: '/exchangepolicy', text: 'Hình thức đổi trả' },
-                        { href: '/shipping', text: 'Chính sách vận chuyển' }
+                        { href: '/user/exchangepolicy', text: 'Hình thức đổi trả' },
+                        { href: '/user/shipping', text: 'Chính sách vận chuyển' }
                      ].map((item, index) => (
                         <li key={index}>
                            <Link href={item.href} className='hover:text-[#FF9900] transition-colors'>
@@ -90,7 +90,7 @@ export default function Footer() {
                   <hr className='w-full border-[#542700] mb-4' />
                   <div className='space-y-3 text-[#542700] text-sm md:text-base font-medium'>
                      <p>Email: candlebliss@gmail.com</p>
-                     <p>Số điện thoại: 03338052</p>
+                     <p>Số điện thoại: 0393877052</p>
                      <p className='break-words'>
                         Địa chỉ: 12 Nguyễn Văn Bảo, Phường 04, 
                         Quận Gò Vấp, Thành phố Hồ Chí Minh, 

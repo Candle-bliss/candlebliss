@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-    Search, Filter, Edit, Trash2, Eye,
+    Search, Filter, Trash2, Eye,
     ArrowLeft, ArrowRight, Download, RefreshCcw, ChevronDown, X
 } from 'lucide-react';
 import Sidebar from '@/app/components/seller/menusidebar/page';
@@ -36,23 +36,27 @@ interface Pagination {
     totalPages: number;
     total: number;
     limit: number;
+    hasNextPage?: boolean;
 }
 
 export default function CustomerPage() {
     // State management
     const [customers, setCustomers] = useState<Customer[]>([]);
-    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [showFilters, setShowFilters] = useState<boolean>(false);
     const [showModal, setShowModal] = useState<boolean>(false);
     const [modalMode, setModalMode] = useState<'view' | 'edit' | 'delete'>('view');
+
+    // Initialize with safe defaults
     const [pagination, setPagination] = useState<Pagination>({
         currentPage: 1,
         totalPages: 1,
         total: 0,
-        limit: 10
+        limit: 10,
+        hasNextPage: true
     });
+    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
     // Filter states
     const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -67,8 +71,7 @@ export default function CustomerPage() {
         status: 1
     });
 
-    // Fetch customers
-    const fetchCustomers = async (page = 1) => {
+    const fetchCustomers = async (page: number = 1) => {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
@@ -78,7 +81,8 @@ export default function CustomerPage() {
                 return;
             }
 
-            const response = await fetch(`${HOST}/api/v1/users?page=${page}&limit=${pagination.limit}`, {
+            // Update the API endpoint to use /v1/users without query parameters
+            const response = await fetch(`${HOST}/api/v1/users`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -90,22 +94,71 @@ export default function CustomerPage() {
 
             const data = await response.json();
 
-            // Filter to only show users with role "User" (not admins)
-            const userCustomers = data.data.filter((user: { role?: { name: string } }) =>
-                user.role && user.role.name === 'User'
-            );
+            // Handle the case where the API returns an array directly
+            if (Array.isArray(data)) {
+                // Filter users with role 'User'
+                const userCustomers = data.filter(user =>
+                    user.role && user.role.name === 'User'
+                );
 
-            setCustomers(userCustomers);
-            setPagination({
-                currentPage: page,
-                totalPages: Math.ceil(data.total / pagination.limit) || 1,
-                total: data.total || 0,
-                limit: pagination.limit
-            });
+                setCustomers(userCustomers);
+
+                // Since we have all data at once, implement client-side pagination
+                setPagination({
+                    currentPage: page,
+                    totalPages: Math.ceil((userCustomers.length || 1) / pagination.limit),
+                    total: userCustomers.length || 0,
+                    limit: pagination.limit,
+                    hasNextPage: page < Math.ceil((userCustomers.length || 1) / pagination.limit)
+                });
+            }
+            // Handle the original format where data is inside data.data
+            else if (data && data.data) {
+                const userCustomers = data.data.filter((user: Customer) =>
+                    user.role && user.role.name === 'User'
+                );
+
+                setCustomers(userCustomers);
+
+                if (data.pagination) {
+                    setPagination({
+                        currentPage: data.pagination.currentPage || 1,
+                        totalPages: data.pagination.totalPages || 1,
+                        total: data.pagination.total || 0,
+                        limit: data.pagination.limit || 10,
+                        hasNextPage: !!data.pagination.hasNextPage
+                    });
+                } else {
+                    setPagination({
+                        currentPage: page,
+                        totalPages: Math.ceil((userCustomers.length || 1) / pagination.limit),
+                        total: userCustomers.length || 0,
+                        limit: pagination.limit,
+                        hasNextPage: false
+                    });
+                }
+            } else {
+                console.error('Invalid response format:', data);
+                setLoading(false);
+                return;
+            }
+
         } catch (error) {
             console.error('Error fetching customers:', error);
         } finally {
             setLoading(false);
+        }
+    };
+    // Cập nhật các hàm xử lý phân trang
+    const nextPage = () => {
+        if (pagination.currentPage < pagination.totalPages) {
+            fetchCustomers(pagination.currentPage + 1);
+        }
+    };
+
+    const prevPage = () => {
+        if (pagination.currentPage > 1) {
+            fetchCustomers(pagination.currentPage - 1);
         }
     };
 
@@ -142,41 +195,7 @@ export default function CustomerPage() {
         }
     };
 
-    // Update customer
-    const updateCustomer = async () => {
-        if (!selectedCustomer) return;
 
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) return;
-
-            const response = await fetch(`${HOST}/api/v1/users/${selectedCustomer.id}`, {
-                method: 'PATCH',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    firstName: editForm.firstName,
-                    lastName: editForm.lastName,
-                    email: editForm.email,
-                    phone: editForm.phone ? editForm.phone : null,
-                    statusId: editForm.status
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to update customer');
-            }
-
-            // Refresh the customer list
-            fetchCustomers(pagination.currentPage);
-            setShowModal(false);
-
-        } catch (error) {
-            console.error('Error updating customer:', error);
-        }
-    };
 
     // Delete customer
     const deleteCustomer = async () => {
@@ -198,7 +217,7 @@ export default function CustomerPage() {
             }
 
             // Refresh the customer list
-            fetchCustomers(pagination.currentPage);
+            fetchCustomers(1);
             setShowModal(false);
 
         } catch (error) {
@@ -283,22 +302,9 @@ export default function CustomerPage() {
         saveAs(dataFile, `khach-hang-${format(new Date(), 'dd-MM-yyyy')}${fileExtension}`);
     };
 
-    // Pagination handlers
-    const nextPage = () => {
-        if (pagination.currentPage < pagination.totalPages) {
-            fetchCustomers(pagination.currentPage + 1);
-        }
-    };
-
-    const prevPage = () => {
-        if (pagination.currentPage > 1) {
-            fetchCustomers(pagination.currentPage - 1);
-        }
-    };
-
     // Initialize component
     useEffect(() => {
-        fetchCustomers();
+        fetchCustomers(1);
     }, []);
 
     return (
@@ -320,7 +326,7 @@ export default function CustomerPage() {
 
                             <div className='flex items-center gap-3'>
                                 <button
-                                    onClick={() => fetchCustomers()}
+                                    onClick={() => fetchCustomers(1)}
                                     className='p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-all'
                                     title='Làm mới'
                                 >
@@ -478,13 +484,7 @@ export default function CustomerPage() {
                                                             >
                                                                 <Eye size={18} />
                                                             </button>
-                                                            <button
-                                                                onClick={() => handleAction(customer, 'edit')}
-                                                                className='p-1.5 rounded-md hover:bg-blue-50 text-blue-500'
-                                                                title='Chỉnh sửa'
-                                                            >
-                                                                <Edit size={18} />
-                                                            </button>
+
                                                             <button
                                                                 onClick={() => handleAction(customer, 'delete')}
                                                                 className='p-1.5 rounded-md hover:bg-red-50 text-red-500'
@@ -510,13 +510,15 @@ export default function CustomerPage() {
                             {/* Pagination */}
                             <div className='px-6 py-4 border-t border-gray-100 flex items-center justify-between'>
                                 <div className='text-sm text-gray-500'>
-                                    Hiển thị {getSortedCustomers().length} trên tổng số {pagination.total} khách hàng
+                                    Hiển thị {customers?.length || 0} khách hàng
+                                    (Trang {pagination?.currentPage || 1}/{pagination?.totalPages || 1},
+                                    Tổng {pagination?.total || 0} khách hàng)
                                 </div>
                                 <div className='flex gap-2'>
                                     <button
                                         onClick={prevPage}
-                                        disabled={pagination.currentPage <= 1}
-                                        className={`p-2 rounded-md border ${pagination.currentPage <= 1
+                                        disabled={!pagination || pagination.currentPage <= 1}
+                                        className={`p-2 rounded-md border ${!pagination || pagination.currentPage <= 1
                                             ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
                                             : 'bg-white text-gray-700 hover:bg-gray-50'
                                             }`}
@@ -524,12 +526,12 @@ export default function CustomerPage() {
                                         <ArrowLeft size={16} />
                                     </button>
                                     <span className='px-4 py-1.5 bg-white border rounded-md text-sm'>
-                                        {pagination.currentPage} / {pagination.totalPages}
+                                        Trang {pagination?.currentPage || 1}
                                     </span>
                                     <button
                                         onClick={nextPage}
-                                        disabled={pagination.currentPage >= pagination.totalPages}
-                                        className={`p-2 rounded-md border ${pagination.currentPage >= pagination.totalPages
+                                        disabled={!pagination || !pagination.hasNextPage}
+                                        className={`p-2 rounded-md border ${!pagination || !pagination.hasNextPage
                                             ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
                                             : 'bg-white text-gray-700 hover:bg-gray-50'
                                             }`}
@@ -680,15 +682,6 @@ export default function CustomerPage() {
                             >
                                 {modalMode === 'view' ? 'Đóng' : 'Hủy'}
                             </button>
-
-                            {modalMode === 'edit' && (
-                                <button
-                                    onClick={updateCustomer}
-                                    className='px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all'
-                                >
-                                    Lưu thay đổi
-                                </button>
-                            )}
 
                             {modalMode === 'delete' && (
                                 <button

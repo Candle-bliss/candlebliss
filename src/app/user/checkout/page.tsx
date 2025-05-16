@@ -11,7 +11,6 @@ import { updateOrderPaymentMethod } from '@/app/utils/orderUtils';
 import { useCart } from '@/app/contexts/CartContext'; // Thêm import này
 import { HOST } from '@/app/constants/api';
 
-// Interfaces
 interface CartItem {
    id: number;
    detailId: number;
@@ -21,8 +20,19 @@ interface CartItem {
    image: string;
    type: string;
    options: { name: string; value: string }[];
+   isGift?: boolean;
+   productDetails?: {
+      id: number;
+      detailId: number;
+      name: string;
+      price: number;
+      quantity: number;
+      image: string;
+      type: string;
+      size: string;
+      value: string;
+   }[];
 }
-
 // Thêm vào interface ở đầu file page.tsx trong trang checkout
 // Cập nhật interface Voucher để phù hợp với API response
 interface Voucher {
@@ -64,6 +74,8 @@ interface UserInfo {
    firstName: string;
    lastName: string;
    phone?: string;
+   createdAt: string; // Add createdAt field
+
 }
 
 // Thêm vào phần khai báo interface ở đầu file
@@ -85,11 +97,12 @@ const formatPrice = (price: number): string => {
    }).format(price);
 };
 
-// Cập nhật hàm kiểm tra tính hợp lệ của voucher
+// Update the isVoucherValid function to accept userInfo as a parameter
 const isVoucherValid = (
    voucher: Voucher,
    currentSubTotal: number,
    userId: number | null,
+   userInfo: UserInfo | null, // Add userInfo parameter
 ): { valid: boolean; message?: string } => {
    // Kiểm tra voucher có đang hoạt động không
    if (!voucher.isActive || voucher.isDeleted) {
@@ -121,6 +134,26 @@ const isVoucherValid = (
             minOrderValue,
          )} để áp dụng mã này. Bạn cần thêm ${formatPrice(minOrderValue - currentSubTotal)} nữa.`,
       };
+   }
+
+   // Kiểm tra điều kiện khách hàng mới
+   if (voucher.new_customers_only) {
+      // Check if user info is available
+      if (!userInfo) {
+         return { valid: false, message: 'Không thể xác minh thông tin người dùng' };
+      }
+
+      // Check user creation date
+      const userCreatedAt = new Date(userInfo.createdAt);
+      const diffTime = Math.abs(now.getTime() - userCreatedAt.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays > 7) {
+         return {
+            valid: false,
+            message: 'Mã giảm giá này chỉ áp dụng cho tài khoản được tạo trong vòng 7 ngày'
+         };
+      }
    }
 
    // THÊM KIỂM TRA: Số lần sử dụng voucher của người dùng
@@ -250,7 +283,7 @@ export default function CheckoutPage() {
    const [processingPayment, setProcessingPayment] = useState(false);
 
    // Thêm các state sau phần khai báo các state khác
-   const [needInvoice, setNeedInvoice] = useState(false);
+   const [needInvoice] = useState(false);
    const [showInvoiceModal, setShowInvoiceModal] = useState(false);
    const [invoiceInfo, setInvoiceInfo] = useState<InvoiceInfo>({
       type: 'personal',
@@ -490,9 +523,23 @@ export default function CheckoutPage() {
    useEffect(() => {
       // Lấy voucher đã áp dụng từ localStorage nếu có
       const savedVoucher = localStorage.getItem('appliedVoucher');
-      if (savedVoucher && userId) {
+      if (savedVoucher && userId && userInfo) {
          try {
             const voucherData = JSON.parse(savedVoucher);
+
+            // Kiểm tra điều kiện khách hàng mới
+            if (voucherData.new_customers_only) {
+               const userCreatedAt = new Date(userInfo.createdAt);
+               const now = new Date();
+               const diffTime = Math.abs(now.getTime() - userCreatedAt.getTime());
+               const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+               if (diffDays > 7) {
+                  localStorage.removeItem('appliedVoucher');
+                  showToastMessage('Mã giảm giá này chỉ áp dụng cho tài khoản được tạo trong vòng 7 ngày', 'error');
+                  return;
+               }
+            }
 
             // Kiểm tra số lần sử dụng
             if (voucherData.usage_per_customer > 0) {
@@ -526,7 +573,31 @@ export default function CheckoutPage() {
             localStorage.removeItem('appliedVoucher');
          }
       }
-   }, [subTotal, userId]);
+   }, [subTotal, userId, userInfo]);
+
+   // Inside your useEffect for validating saved vouchers
+   useEffect(() => {
+      // Lấy voucher đã áp dụng từ localStorage nếu có
+      const savedVoucher = localStorage.getItem('appliedVoucher');
+      if (savedVoucher && userId && userInfo) {
+         try {
+            const voucherData = JSON.parse(savedVoucher);
+
+            // You can reuse your validation function here
+            const validationResult = isVoucherValid(voucherData, subTotal, userId, userInfo);
+            if (!validationResult.valid) {
+               localStorage.removeItem('appliedVoucher');
+               showToastMessage(validationResult.message || 'Unknown error occurred', 'error');
+               return;
+            }
+
+            // Rest of your existing code...
+         } catch (error) {
+            console.error('Error parsing saved voucher:', error);
+            localStorage.removeItem('appliedVoucher');
+         }
+      }
+   }, [subTotal, userId, userInfo]);
 
    // Thêm vào useEffect để load voucher đã áp dụng từ cart
    useEffect(() => {
@@ -640,6 +711,7 @@ export default function CheckoutPage() {
                firstName: user.firstName,
                lastName: user.lastName,
                phone: user.phone,
+               createdAt: user.createdAt, // Store the user's creation date
             });
 
             // Pre-fill new address form with user info
@@ -1332,7 +1404,8 @@ export default function CheckoutPage() {
          const voucher = await voucherResponse.json();
 
          // Kiểm tra tính hợp lệ của voucher, bao gồm số lần sử dụng
-         const validationResult = isVoucherValid(voucher, subTotal, userId);
+         const validationResult = isVoucherValid(voucher, subTotal, userId, userInfo); // Pass userInfo here
+
          if (!validationResult.valid) {
             throw new Error(validationResult.message);
          }
@@ -2135,15 +2208,40 @@ export default function CheckoutPage() {
                                  </span>
                               </div>
                               <div className='ml-3 flex-1'>
-                                 <p className='font-medium text-sm line-clamp-2'>{item.name}</p>
+                                 <p className='font-medium text-sm line-clamp-2'>
+                                    {item.isGift ? `🎁 ${item.name}` : item.name}
+                                 </p>
 
                                  <div className='text-xs text-gray-500 mt-1'>
-                                    {/* Show product options */}
-                                    {item.options?.map((option, idx) => (
+                                    {/* Show regular product options */}
+                                    {!item.isGift && item.options?.map((option, idx) => (
                                        <p key={idx}>
                                           {option.name}: {option.value}
                                        </p>
                                     ))}
+
+                                    {/* Show gift product details */}
+                                    {item.isGift && item.productDetails && (
+                                       <div className='mt-1'>
+                                          <div className='text-xs text-gray-500 font-medium mb-1'>
+                                             Bao gồm {item.productDetails.length} sản phẩm:
+                                          </div>
+                                          <div className='text-xs text-gray-500 max-h-16 overflow-y-auto pl-2 border-l-2 border-amber-200'>
+                                             {item.productDetails.slice(0, 3).map((product, idx) => (
+                                                <div key={`gift-product-${product.id}-${idx}`} className='mb-1'>
+                                                   • {product.name}
+                                                   {product.size ? ` (${product.size})` : ''}
+                                                   {product.type ? ` - ${product.type}: ${product.value || ''}` : ''}
+                                                </div>
+                                             ))}
+                                             {item.productDetails.length > 3 && (
+                                                <div className='text-amber-600'>
+                                                   + {item.productDetails.length - 3} sản phẩm khác
+                                                </div>
+                                             )}
+                                          </div>
+                                       </div>
+                                    )}
                                  </div>
 
                                  <div className='flex justify-between mt-1'>
@@ -2323,66 +2421,7 @@ export default function CheckoutPage() {
                         </Link>{' '}
                         của chúng tôi
                      </p>
-                     {/* Thêm phần checkbox in hóa đơn */}
-                     <div className='mt-6 border-t border-gray-200 pt-4'>
-                        <div className='flex items-center'>
-                           <input
-                              type='checkbox'
-                              id='needInvoice'
-                              checked={needInvoice}
-                              onChange={(e) => setNeedInvoice(e.target.checked)}
-                              className='h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded'
-                           />
-                           <label
-                              htmlFor='needInvoice'
-                              className='ml-2 block text-sm text-gray-900'
-                           >
-                              Yêu cầu xuất hóa đơn
-                           </label>
-                           {needInvoice && (
-                              <button
-                                 type='button'
-                                 onClick={() => setShowInvoiceModal(true)}
-                                 className='ml-auto text-sm text-orange-600 hover:text-orange-700 font-medium'
-                              >
-                                 {invoiceInfo.name ? 'Chỉnh sửa thông tin' : 'Nhập thông tin'}
-                              </button>
-                           )}
-                        </div>
 
-                        {needInvoice && invoiceInfo.name && (
-                           <div className='mt-3 p-3 bg-orange-50 rounded-lg border border-orange-200 text-sm'>
-                              <p className='font-medium'>
-                                 {invoiceInfo.type === 'personal'
-                                    ? 'Hóa đơn cá nhân'
-                                    : 'Hóa đơn công ty'}
-                              </p>
-                              {invoiceInfo.type === 'company' && (
-                                 <>
-                                    <p>
-                                       Công ty:{' '}
-                                       <span className='font-medium'>
-                                          {invoiceInfo.companyName}
-                                       </span>
-                                    </p>
-                                    <p>
-                                       Mã số thuế:{' '}
-                                       <span className='font-medium'>{invoiceInfo.taxCode}</span>
-                                    </p>
-                                 </>
-                              )}
-                              <p>
-                                 Người nhận: <span className='font-medium'>{invoiceInfo.name}</span>
-                              </p>
-                              <p>
-                                 Địa chỉ: <span className='font-medium'>{invoiceInfo.address}</span>
-                              </p>
-                              <p>
-                                 Email: <span className='font-medium'>{invoiceInfo.email}</span>
-                              </p>
-                           </div>
-                        )}
-                     </div>
                   </div>
                </div>
             </div>
@@ -2558,28 +2597,7 @@ export default function CheckoutPage() {
                               />
                            </div>
 
-                           <div>
-                              <div className='text-sm text-gray-600 space-y-2'>
-                                 <p>
-                                    Hóa đơn sẽ được gửi trong vòng 7 ngày làm việc (không tính T7 -
-                                    CN) kể từ thời điểm nhận hàng thành công và không phát sinh đổi
-                                    trả.
-                                 </p>
-                                 <p>
-                                    <strong>Miễn trừ trách nhiệm:</strong> Hóa đơn điện tử cho đơn
-                                    hàng này sẽ do Doanh nghiệp phát hành và được tính trên giá trị
-                                    sản phẩm ban đầu (chưa bao gồm phí vận chuyển). Trường hợp Người
-                                    mua không cung cấp thông tin hoặc không gửi yêu cầu xuất hóa đơn
-                                    khi đặt hàng, Doanh nghiệp sẽ sử dụng thông tin trên đơn hàng để
-                                    xuất hóa đơn.
-                                 </p>
-                                 <p>
-                                    Candle Bliss từ chối xử lý các yêu cầu phát sinh trong việc kê
-                                    khai thuế đối với hóa đơn từ 20 triệu đồng trở lên thanh toán
-                                    bằng tiền mặt.
-                                 </p>
-                              </div>
-                           </div>
+
                         </div>
                      </div>
 

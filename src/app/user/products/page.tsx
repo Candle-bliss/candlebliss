@@ -10,6 +10,7 @@ import NavBar from '@/app/components/user/nav/page';
 import Footer from '@/app/components/user/footer/page';
 import ChatBot from '@/app/components/user/chatbot/ChatBot';
 import { HOST } from '@/app/constants/api';
+import StarRating from '@/app/components/StarRating';
 
 interface ProductImage {
    id: string;
@@ -53,6 +54,7 @@ interface ProductCardProps {
    price: string;
    discountPrice?: string;
    rating: number;
+   reviewCount?: number;
    imageUrl: string;
    variants?: Array<{
       detailId: number;
@@ -85,24 +87,6 @@ interface PriceRange {
    hasDiscount?: boolean; // Add this property
 }
 
-// Thêm StarDisplay component từ trang chi tiết sản phẩm
-const StarDisplay = ({ rating }: { rating: number }) => {
-   return (
-      <div className='flex'>
-         {[1, 2, 3, 4, 5].map((star) => (
-            <svg
-               key={star}
-               xmlns='http://www.w3.org/2000/svg'
-               className={`h-4 w-4 ${star <= rating ? 'text-yellow-400' : 'text-gray-300'}`}
-               viewBox='0 0 20 20'
-               fill='currentColor'
-            >
-               <path d='M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z' />
-            </svg>
-         ))}
-      </div>
-   );
-};
 
 // Update ProductCard component to better handle variants and their prices
 const ProductCard = ({
@@ -150,7 +134,7 @@ const ProductCard = ({
    };
 
    const renderStars = () => {
-      return <StarDisplay rating={rating} />;
+      return <StarRating rating={rating} size="sm" showCount={false} />;
    };
 
    const formatPrice = (value: string | number) => {
@@ -310,7 +294,9 @@ function ProductSearch({ onSearch }: { onSearch: (query: string) => void }) {
    return null; // This component doesn't render anything, just processes the search
 }
 
-// Tối ưu: Tạo hàm để lấy ratings cho nhiều sản phẩm cùng lúc
+// Hàm fetchRatingsForProducts đã có trong code hiện tại và đã cập nhật đúng rồi,
+// nhưng để chắc chắn, hãy kiểm tra xem nó có đúng định dạng sau không:
+
 const fetchRatingsForProducts = async (productIds: number[]) => {
    if (!productIds.length) return {};
 
@@ -338,7 +324,7 @@ const fetchRatingsForProducts = async (productIds: number[]) => {
                0,
             );
             ratingsMap[id] = {
-               rating: productRatings.length > 0 ? totalRating / productRatings.length : 5,
+               rating: productRatings.length > 0 ? totalRating / productRatings.length : 0,
                reviewCount: productRatings.length,
             };
          } else {
@@ -442,125 +428,122 @@ interface RecommendedProductsProps {
 
 const RecommendedProducts = ({ allProducts, currentSearchTerm, onViewDetail }: RecommendedProductsProps) => {
    const [recommendations, setRecommendations] = useState<typeof allProducts>([]);
-   const [recommendationType, setRecommendationType] = useState<'search' | 'viewed'>('search');
    const [currentSlide, setCurrentSlide] = useState(0);
    const itemsPerSlide = 4; // Mỗi trang hiển thị 4 sản phẩm
 
    useEffect(() => {
-      // Lấy khuyến nghị dựa trên từ khóa tìm kiếm hiện tại
-      const getSearchBasedRecommendations = () => {
-         if (!currentSearchTerm.trim()) {
-            // Nếu không có từ khóa hiện tại, lấy từ lịch sử tìm kiếm
-            const searchHistory: SearchHistory[] = JSON.parse(localStorage.getItem('searchHistory') || '[]');
-
-            if (searchHistory.length === 0) return []; // Thêm return []
-
-            // Sắp xếp lịch sử tìm kiếm theo số lần tìm kiếm
-            const topSearches = searchHistory.sort((a, b) => b.count - a.count).slice(0, 3);
-
-            // Tìm sản phẩm phù hợp với các từ khóa phổ biến
-            let recommendedProducts: typeof allProducts = [];
-
-            topSearches.forEach(search => {
-               const term = search.term.toLowerCase();
-               const matchingProducts = allProducts.filter(product =>
-                  product.title.toLowerCase().includes(term) ||
-                  (product.description && product.description.toLowerCase().includes(term))
-               );
-
-               recommendedProducts = [...recommendedProducts, ...matchingProducts];
-            });
-
-            // Loại bỏ trùng lặp
-            return Array.from(new Set(recommendedProducts.map(p => p.id)))
-               .map(id => recommendedProducts.find(p => p.id === id)!)
-               .slice(0, 8);
-         } else {
-            // Nếu có từ khóa hiện tại, tìm các sản phẩm tương tự (từ khóa là một phần của từ khóa hiện tại)
-            const terms = currentSearchTerm.toLowerCase().split(' ')
-               .filter(term => term.length > 2); // Chỉ xét các từ có độ dài > 2
-
-            if (terms.length === 0) return [];
-
-            // Tìm sản phẩm khớp với từng từ trong từ khóa
-            let recommendedProducts: typeof allProducts = [];
-
-            terms.forEach(term => {
-               const matchingProducts = allProducts.filter(product =>
-                  product.title.toLowerCase().includes(term) ||
-                  (product.description && product.description.toLowerCase().includes(term))
-               );
-
-               recommendedProducts = [...recommendedProducts, ...matchingProducts];
-            });
-
-            // Loại bỏ các sản phẩm đã xuất hiện trong kết quả tìm kiếm chính xác
-            const exactMatches = allProducts.filter(product =>
-               product.title.toLowerCase().includes(currentSearchTerm.toLowerCase()) ||
-               (product.description && product.description.toLowerCase().includes(currentSearchTerm.toLowerCase()))
-            );
-
-            const exactMatchIds = new Set(exactMatches.map(p => p.id));
-            recommendedProducts = recommendedProducts.filter(p => !exactMatchIds.has(p.id));
-
-            // Loại bỏ trùng lặp và giới hạn số lượng
-            return Array.from(new Set(recommendedProducts.map(p => p.id)))
-               .map(id => recommendedProducts.find(p => p.id === id)!)
-               .slice(0, 8);
-         }
-      };
-
-      // Lấy khuyến nghị dựa trên lịch sử xem sản phẩm
-      const getViewBasedRecommendations = () => {
+      // Kết hợp cả hai loại khuyến nghị (tìm kiếm và sản phẩm đã xem)
+      const getCombinedRecommendations = () => {
+         // Lấy khuyến nghị dựa trên lịch sử xem
          const viewHistory: ViewHistory[] = JSON.parse(localStorage.getItem('viewHistory') || '[]');
 
-         if (viewHistory.length === 0) return []; // Thêm return []
+         // Khởi tạo mảng sản phẩm đề xuất
+         let recommendedProducts: typeof allProducts = [];
 
-         // Lấy top 3 sản phẩm xem nhiều nhất
-         const topViewedProducts = viewHistory
-            .sort((a, b) => b.viewCount - a.viewCount)
-            .slice(0, 3)
+         // 1. Thêm các sản phẩm đã xem gần đây (tối đa 2 sản phẩm)
+         const recentlyViewedProducts = viewHistory
+            .sort((a, b) => b.lastViewed - a.lastViewed)
+            .slice(0, 4)
             .map(v => allProducts.find(p => p.id === v.productId))
             .filter((p): p is typeof allProducts[0] => Boolean(p));
 
-         if (topViewedProducts.length === 0) return [];
+         recommendedProducts = [...recentlyViewedProducts];
 
-         // Tìm các sản phẩm tương tự với sản phẩm đã xem
-         const similarProducts: Record<number, { product: typeof allProducts[0], score: number }> = {};
+         // 2. Thêm các sản phẩm tương tự với sản phẩm đã xem
+         if (recentlyViewedProducts.length > 0) {
+            const similarProducts: Record<number, { product: typeof allProducts[0], score: number }> = {};
 
-         allProducts.forEach(product => {
-            // Bỏ qua các sản phẩm đã xem
-            if (topViewedProducts.some((p) => p.id === product.id)) return;
+            allProducts.forEach(product => {
+               // Bỏ qua các sản phẩm đã xem
+               if (recentlyViewedProducts.some((p) => p.id === product.id)) return;
 
-            let totalScore = 0;
-            topViewedProducts.forEach(viewedProduct => {
-               totalScore += getSimilarityScore(viewedProduct, product);
+               let totalScore = 0;
+               recentlyViewedProducts.forEach(viewedProduct => {
+                  totalScore += getSimilarityScore(viewedProduct, product);
+               });
+
+               if (totalScore > 0) {
+                  similarProducts[product.id] = { product, score: totalScore };
+               }
             });
 
-            if (totalScore > 0) {
-               similarProducts[product.id] = { product, score: totalScore };
+            // Lấy các sản phẩm có điểm tương đồng cao nhất
+            const recommendedSimilarProducts = Object.values(similarProducts)
+               .sort((a, b) => b.score - a.score)
+               .map(item => item.product)
+               .slice(0, 4);
+
+            recommendedProducts = [...recommendedProducts, ...recommendedSimilarProducts];
+         }
+
+         // 3. Thêm các sản phẩm dựa trên từ khóa tìm kiếm
+         if (currentSearchTerm.trim()) {
+            // Nếu có từ khóa hiện tại, tìm các sản phẩm tương tự
+            const terms = currentSearchTerm.toLowerCase().split(' ')
+               .filter(term => term.length > 2);
+
+            if (terms.length > 0) {
+               // Tìm sản phẩm khớp với từng từ trong từ khóa
+               let searchBasedProducts: typeof allProducts = [];
+
+               terms.forEach(term => {
+                  const matchingProducts = allProducts.filter(product =>
+                     product.title.toLowerCase().includes(term) ||
+                     (product.description && product.description.toLowerCase().includes(term))
+                  );
+
+                  searchBasedProducts = [...searchBasedProducts, ...matchingProducts];
+               });
+
+               // Loại bỏ các sản phẩm đã xuất hiện trong kết quả tìm kiếm chính xác
+               const exactMatches = allProducts.filter(product =>
+                  product.title.toLowerCase().includes(currentSearchTerm.toLowerCase()) ||
+                  (product.description && product.description.toLowerCase().includes(currentSearchTerm.toLowerCase()))
+               );
+
+               const exactMatchIds = new Set(exactMatches.map(p => p.id));
+               searchBasedProducts = searchBasedProducts.filter(p => !exactMatchIds.has(p.id));
+
+               // Thêm vào danh sách đề xuất
+               recommendedProducts = [...recommendedProducts, ...searchBasedProducts];
             }
-         });
+         } else {
+            // Nếu không có từ khóa hiện tại, lấy từ lịch sử tìm kiếm
+            const searchHistory: SearchHistory[] = JSON.parse(localStorage.getItem('searchHistory') || '[]');
 
-         // Lấy các sản phẩm có điểm tương đồng cao nhất
-         const recommendedSimilarProducts = Object.values(similarProducts)
-            .sort((a, b) => b.score - a.score)
-            .map(item => item.product)
+            if (searchHistory.length > 0) {
+               // Sắp xếp lịch sử tìm kiếm theo số lần tìm kiếm
+               const topSearches = searchHistory.sort((a, b) => b.count - a.count).slice(0, 2);
+
+               // Tìm sản phẩm phù hợp với các từ khóa phổ biến
+               let searchHistoryProducts: typeof allProducts = [];
+
+               topSearches.forEach(search => {
+                  const term = search.term.toLowerCase();
+                  const matchingProducts = allProducts.filter(product =>
+                     product.title.toLowerCase().includes(term) ||
+                     (product.description && product.description.toLowerCase().includes(term))
+                  );
+
+                  searchHistoryProducts = [...searchHistoryProducts, ...matchingProducts];
+               });
+
+               // Thêm vào danh sách đề xuất
+               recommendedProducts = [...recommendedProducts, ...searchHistoryProducts];
+            }
+         }
+
+         // 4. Loại bỏ sản phẩm trùng lặp và lấy tối đa 8 sản phẩm
+         return Array.from(new Set(recommendedProducts.map(p => p.id)))
+            .map(id => recommendedProducts.find(p => p.id === id)!)
             .slice(0, 8);
-
-         return [...topViewedProducts, ...recommendedSimilarProducts].slice(0, 8);
       };
 
-      // Quyết định loại khuyến nghị sẽ hiển thị
-      if (recommendationType === 'search') {
-         setRecommendations(getSearchBasedRecommendations());
-      } else {
-         setRecommendations(getViewBasedRecommendations());
-      }
-
-      // Reset current slide khi đổi loại gợi ý
-      setCurrentSlide(0);
-   }, [allProducts, currentSearchTerm, recommendationType]);
+      // Lấy danh sách sản phẩm đề xuất kết hợp
+      const combinedRecommendations = getCombinedRecommendations();
+      setRecommendations(combinedRecommendations);
+      setCurrentSlide(0); // Reset slide về đầu
+   }, [allProducts, currentSearchTerm]);
 
    if (recommendations.length === 0) return null;
 
@@ -591,31 +574,8 @@ const RecommendedProducts = ({ allProducts, currentSearchTerm, onViewDetail }: R
       <div className="mt-10 mb-6">
          <div className="flex items-center justify-between mb-4">
             <h3 className="text-xl font-semibold text-gray-800">
-               {recommendationType === 'search'
-                  ? 'Sản phẩm có thể bạn quan tâm'
-                  : 'Sản phẩm bạn đã xem'}
+               Có thể bạn sẽ thích
             </h3>
-
-            <div className="flex gap-2">
-               <button
-                  onClick={() => setRecommendationType('search')}
-                  className={`px-3 py-1 text-sm rounded-md ${recommendationType === 'search'
-                     ? 'bg-amber-100 text-amber-800'
-                     : 'text-gray-700 hover:bg-gray-100'
-                     }`}
-               >
-                  Đề xuất
-               </button>
-               <button
-                  onClick={() => setRecommendationType('viewed')}
-                  className={`px-3 py-1 text-sm rounded-md ${recommendationType === 'viewed'
-                     ? 'bg-amber-100 text-amber-800'
-                     : 'text-gray-700 hover:bg-gray-100'
-                     }`}
-               >
-                  Đã xem
-               </button>
-            </div>
          </div>
 
          {/* Carousel Container */}
@@ -656,6 +616,7 @@ const RecommendedProducts = ({ allProducts, currentSearchTerm, onViewDetail }: R
                         price={product.price}
                         discountPrice={product.discountPrice}
                         rating={product.rating}
+                        reviewCount={product.reviewCount || 0}
                         imageUrl={product.imageUrl}
                         variants={product.variants}
                         onViewDetail={onViewDetail}
@@ -688,21 +649,40 @@ const RecommendedProducts = ({ allProducts, currentSearchTerm, onViewDetail }: R
 const getSimilarityScore = (product1: RecommendedProductsProps['allProducts'][0], product2: RecommendedProductsProps['allProducts'][0]) => {
    let score = 0;
 
-   // Điểm cho tên sản phẩm tương tự
-   const title1Words = product1.title.toLowerCase().split(' ');
-   const title2Words = product2.title.toLowerCase().split(' ');
+   // 1. Điểm cho tên sản phẩm tương tự (cải tiến)
+   const title1Words = product1.title.toLowerCase().split(/\s+/).filter(word => word.length > 2);
+   const title2Words = product2.title.toLowerCase().split(/\s+/).filter(word => word.length > 2);
+
+   // Tính số từ chung giữa hai tiêu đề (chỉ tính từ có ít nhất 3 chữ cái)
    const commonTitleWords = title1Words.filter(word => title2Words.includes(word)).length;
-   score += commonTitleWords * 2;
 
-   // Điểm cho đánh giá tương tự
-   const ratingDiff = Math.abs(product1.rating - product2.rating);
-   if (ratingDiff <= 0.5) score += 1
+   // Điểm cao hơn cho tên tương tự
+   if (commonTitleWords > 0) {
+      // Tỷ lệ từ chung trên tổng số từ
+      const titleSimilarityRatio = commonTitleWords / Math.max(title1Words.length, title2Words.length);
+      score += commonTitleWords * 3 + (titleSimilarityRatio * 5);
+   }
 
-   // Điểm cho khoảng giá tương tự
+   // 2. Điểm cho khoảng giá tương tự (cải tiến)
    const price1 = parseFloat(product1.price);
    const price2 = parseFloat(product2.price);
-   const priceDiff = Math.abs(price1 - price2) / Math.max(price1, price2);
-   if (priceDiff <= 0.2) score += 1;
+
+   // Tính tỷ lệ chênh lệch giá
+   const priceDiff = Math.abs(price1 - price2);
+   const priceRatio = priceDiff / Math.max(price1, price2);
+
+   // Điểm cao cho sản phẩm có giá gần nhau
+   if (priceRatio <= 0.1) { // Giá chênh lệch ≤ 10%
+      score += 5;
+   } else if (priceRatio <= 0.2) { // Giá chênh lệch ≤ 20%
+      score += 3;
+   } else if (priceRatio <= 0.3) { // Giá chênh lệch ≤ 30%
+      score += 1;
+   }
+
+   // 3. Điểm cho đánh giá tương tự
+   const ratingDiff = Math.abs(product1.rating - product2.rating);
+   if (ratingDiff <= 0.5) score += 1;
 
    return score;
 };
@@ -753,8 +733,6 @@ export default function ProductPage() {
    const [error, setError] = useState<string | null>(null);
    const [networkError, setNetworkError] = useState<boolean>(false); // Add network error state
    const [searchQuery, setSearchQuery] = useState('');
-
-   // Add these new states for filtering and sorting
    const [selectedPriceRange, setSelectedPriceRange] = useState<PriceRange | null>(null);
    const [sortOption, setSortOption] = useState<string>('default');
 
@@ -795,7 +773,6 @@ export default function ProductPage() {
    // Define sorting options
    const sortOptions: SortOption[] = [
       { value: 'default', label: 'Mặc định' },
-      { value: 'rating-desc', label: 'Đánh giá cao nhất' }, // Add this new option
       { value: 'price-asc', label: 'Giá tăng dần' },
       { value: 'price-desc', label: 'Giá giảm dần' },
       { value: 'name-asc', label: 'Tên A-Z' },
@@ -1521,6 +1498,7 @@ export default function ProductPage() {
                         price={product.price}
                         discountPrice={product.discountPrice}
                         rating={product.rating}
+                        reviewCount={product.reviewCount || 0}
                         imageUrl={product.imageUrl}
                         variants={product.variants}
                         onViewDetail={handleViewDetail}

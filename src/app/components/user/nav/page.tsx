@@ -95,6 +95,15 @@ function NavBarContent() {
    const [productDetailCounts, setProductDetailCounts] = useState<{ [key: number]: number }>({});
    const [currentProductDetailId, setCurrentProductDetailId] = useState<number | null>(null);
    const [categories, setCategories] = useState<Category[]>([]);
+   const [suggestedKeywords, setSuggestedKeywords] = useState<string[]>([]);
+   const [isLoadingKeywords, setIsLoadingKeywords] = useState(false);
+   interface Product {
+      id: number;
+      name: string;
+      images?: { path: string }[];
+      // Add other fields as needed
+   }
+   const [allProducts, setAllProducts] = useState<Product[]>([]);
 
    const router = useRouter();
    const pathname = usePathname();
@@ -114,20 +123,26 @@ function NavBarContent() {
    };
 
    const handleLogout = useCallback(() => {
+      // Clear all authentication data
       localStorage.removeItem('userToken');
       localStorage.removeItem('token');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('userId');
-      localStorage.removeItem('cartBadge'); // Clear badge on logout
 
+      // Clear all cart-related data
+      localStorage.removeItem('cartBadge');
+      localStorage.removeItem('cart'); // Clear the local cart items
+      localStorage.removeItem('orderCompleted');
+
+      // Reset states
       setIsLoggedIn(false);
       setUserName(null);
       setUserId(null);
       setShowUserMenu(false);
-      updateCartBadge(0); // Use context method to reset badge
+      updateCartBadge(0); // Reset cart badge using context method
 
       router.push('/user/home');
-   }, [router, updateCartBadge]); // Add updateCartBadge to dependencies
+   }, [router, updateCartBadge]);
 
 
    const checkAuthStatus = useCallback(() => {
@@ -139,7 +154,29 @@ function NavBarContent() {
 
             const currentTime = Date.now() / 1000;
             if (decoded.exp && decoded.exp < currentTime) {
-               handleLogout();
+               console.log('Token expired, logging out and clearing cart data');
+               // Token expired - clear all cart and authentication data
+               localStorage.removeItem('userToken');
+               localStorage.removeItem('token');
+               localStorage.removeItem('refreshToken');
+               localStorage.removeItem('userId');
+
+               // Clear all cart-related data
+               localStorage.removeItem('cartBadge');
+               localStorage.removeItem('cart');
+               localStorage.removeItem('orderCompleted');
+
+               // Reset states
+               setIsLoggedIn(false);
+               setUserName(null);
+               setUserId(null);
+               updateCartBadge(0);
+
+               // Don't need to call the full handleLogout since we've already cleared everything
+               // Just need to handle redirects if necessary
+               if (pathname === '/user/profile' || pathname.startsWith('/user/orders')) {
+                  router.push('/user/signin');
+               }
                return;
             }
 
@@ -152,7 +189,23 @@ function NavBarContent() {
             }
          } catch (error) {
             console.error('Invalid token:', error);
-            handleLogout();
+            // Same cleanup as above for invalid tokens
+            localStorage.removeItem('userToken');
+            localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('cartBadge');
+            localStorage.removeItem('cart');
+            localStorage.removeItem('orderCompleted');
+
+            setIsLoggedIn(false);
+            setUserName(null);
+            setUserId(null);
+            updateCartBadge(0);
+
+            if (pathname === '/user/profile' || pathname.startsWith('/user/orders')) {
+               router.push('/user/signin');
+            }
          }
       } else {
          setIsLoggedIn(false);
@@ -163,7 +216,7 @@ function NavBarContent() {
             router.push('/user/signin');
          }
       }
-   }, [pathname, router, handleLogout]);
+   }, [pathname, router, updateCartBadge]);
 
    useEffect(() => {
       checkAuthStatus();
@@ -291,6 +344,7 @@ function NavBarContent() {
       if (searchQuery.trim()) {
          router.push(`/user/products?search=${encodeURIComponent(searchQuery.trim())}`);
          closeSearchInput();
+         setSuggestedKeywords([]); // Xóa từ khóa gợi ý khi tìm kiếm
 
          if (mobileMenuOpen) {
             setMobileMenuOpen(false);
@@ -535,6 +589,7 @@ function NavBarContent() {
             searchButton &&
             !searchButton.contains(event.target as Node)) {
             closeSearchInput();
+            setSuggestedKeywords([]); // Xóa từ khóa gợi ý khi đóng modal
          }
       };
 
@@ -546,6 +601,165 @@ function NavBarContent() {
          document.removeEventListener('mousedown', handleClickOutside);
       };
    }, [showSearchInput]);
+
+   useEffect(() => {
+      const loadAllProducts = async () => {
+         try {
+            const response = await fetch(`${HOST}/api/products`);
+            if (response.ok) {
+               const products = await response.json();
+               if (Array.isArray(products)) {
+                  setAllProducts(products);
+               }
+            }
+         } catch (error) {
+            console.error('Error loading products for keyword suggestions:', error);
+         }
+      };
+
+      loadAllProducts();
+   }, []);
+
+   // Thay thế hàm fetchSuggestedKeywords hiện tại bằng hàm mới:
+   const fetchSuggestedKeywords = useCallback(async (query: string) => {
+      if (!query || query.trim().length < 2) {
+         setSuggestedKeywords([]);
+         return;
+      }
+
+      setIsLoadingKeywords(true);
+
+      // Tìm từ khóa từ danh sách sản phẩm đã có
+      const searchTermLower = query.toLowerCase();
+      const matchingKeywords: string[] = [];
+
+      allProducts.forEach(product => {
+         const productName = product.name?.toLowerCase() || '';
+
+         if (productName.includes(searchTermLower)) {
+            matchingKeywords.push(product.name);
+         }
+
+         // Tách từ và phân tích
+         const words = productName.split(/\s+/);
+         words.forEach((word: string) => {
+            if (word.startsWith(searchTermLower) && word !== searchTermLower && !matchingKeywords.includes(word)) {
+               matchingKeywords.push(word);
+            }
+         });
+      });
+
+      // Nếu có đủ từ khóa từ sản phẩm, trả về kết quả
+      if (matchingKeywords.length >= 3) {
+         setSuggestedKeywords(matchingKeywords.slice(0, 5));
+         setIsLoadingKeywords(false);
+         return;
+      }
+
+      // Nếu không có đủ từ khóa, kết hợp với AI
+      try {
+         // Gọi API AI để lấy gợi ý bổ sung
+         const aiResponse = await fetch('/api/chatbot', {
+            method: 'POST',
+            headers: {
+               'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+               message: `Gợi ý 5 từ khóa tìm kiếm liên quan đến "${query}" cho cửa hàng nến thơm, đặc biệt là các loại nến thơm, tinh dầu, đèn xông tinh dầu, phụ kiện decor. Chỉ trả về danh sách từ khóa, không cần giải thích thêm.`
+            }),
+         });
+
+         if (aiResponse.ok) {
+            const data = await aiResponse.json();
+            if (data.result) {
+               const aiKeywords = parseKeywordsFromAIResponse(data.result);
+
+               // Kết hợp từ khóa từ sản phẩm và AI, loại bỏ trùng lặp
+               const combinedKeywords = [...new Set([...matchingKeywords, ...aiKeywords])];
+               setSuggestedKeywords(combinedKeywords.slice(0, 5));
+            } else {
+               // Nếu AI không trả về kết quả, dùng chỉ từ khóa từ sản phẩm
+               setSuggestedKeywords(matchingKeywords.slice(0, 5));
+            }
+         } else {
+            // Nếu gọi API thất bại, dùng chỉ từ khóa từ sản phẩm
+            setSuggestedKeywords(matchingKeywords.slice(0, 5));
+         }
+      } catch (error) {
+         console.error('Error fetching AI keyword suggestions:', error);
+         // Nếu có lỗi, dùng chỉ từ khóa từ sản phẩm
+         setSuggestedKeywords(matchingKeywords.slice(0, 5));
+      } finally {
+         setIsLoadingKeywords(false);
+      }
+   }, [allProducts]);
+
+   // Hàm phân tích từ khóa từ phản hồi của AI
+   const parseKeywordsFromAIResponse = (response: string): string[] => {
+      // Cố gắng phân tích xem AI trả về dạng gì (array, list, text)
+      try {
+         // Thử xem phản hồi có phải là JSON không
+         const jsonMatch = response.match(/\[.*?\]/);
+         if (jsonMatch) {
+            const jsonString = jsonMatch[0];
+            return JSON.parse(jsonString);
+         }
+
+         // Nếu không phải JSON, tìm danh sách được đánh số hoặc dấu gạch đầu dòng
+         const lines = response.split('\n').map(line => line.trim());
+         const keywordLines = lines.filter(line =>
+            line.match(/^(\d+\.|\-|\*)\s+/) || // Dòng bắt đầu với số, dấu gạch ngang hoặc dấu sao
+            (line.length > 0 && !line.includes(' ') && !line.includes(':')) // Hoặc dòng chỉ chứa một từ
+         );
+
+         if (keywordLines.length > 0) {
+            return keywordLines.map(line =>
+               line.replace(/^(\d+\.|\-|\*)\s+/, '') // Loại bỏ số thứ tự hoặc dấu đầu dòng
+            );
+         }
+
+         // Nếu không tìm thấy dạng nào, tách thành các phần riêng biệt
+         return response
+            .split(/[,.\n]/)
+            .map(part => part.trim())
+            .filter(part => part.length > 0 && part.length < 30); // Chỉ lấy phần có ý nghĩa
+      } catch (error) {
+         console.error('Error parsing keywords from AI response:', error);
+         return [];
+      }
+   };
+
+   // Cập nhật hàm xử lý khi người dùng nhập từ khóa
+   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setSearchQuery(value);
+
+      // Nếu người dùng đã nhập ít nhất 2 ký tự, gọi API để lấy gợi ý từ khóa
+      if (value.length >= 2) {
+         // Debounce để tránh gọi API quá nhiều
+         const handler = setTimeout(() => {
+            fetchSuggestedKeywords(value);
+         }, 500);
+
+         return () => clearTimeout(handler);
+      } else {
+         setSuggestedKeywords([]);
+      }
+   };
+
+   // Cập nhật để xử lý khi người dùng chọn từ khóa
+   const selectKeywordSuggestion = (keyword: string) => {
+      setSearchQuery(keyword);
+      // Ẩn danh sách từ khóa gợi ý
+      setSuggestedKeywords([]);
+      // Thực hiện tìm kiếm ngay lập tức
+      router.push(`/user/products?search=${encodeURIComponent(keyword.trim())}`);
+      closeSearchInput();
+
+      if (mobileMenuOpen) {
+         setMobileMenuOpen(false);
+      }
+   };
 
    return (
       <>
@@ -624,6 +838,11 @@ function NavBarContent() {
                      <hr className='border-[#553C26]' />
                   </div>
                </div>
+               <Link href='/user/gifts'>
+                  <button className='text-base xl:text-lg hover:text-[#FF9900] focus:font-semibold focus:text-[#FF9900] font-mont hover:font-semibold'>
+                     Combo Khuyến Mãi
+                  </button>
+               </Link>
                <Link href='/user/vouchers'>
                   <button className='text-base xl:text-lg hover:text-[#FF9900] focus:font-semibold focus:text-[#FF9900] font-mont hover:font-semibold'>
                      Mã Giảm Giá
@@ -648,7 +867,7 @@ function NavBarContent() {
                               className='p-2 border border-[#553C26] rounded-lg'
                               placeholder='Nhấn Enter để tìm kiếm...'
                               value={searchQuery}
-                              onChange={(e) => setSearchQuery(e.target.value)}
+                              onChange={handleSearchInputChange}
                               autoFocus
                            />
                            <button type='submit' className='ml-2 text-[#553C26]'>
@@ -663,21 +882,106 @@ function NavBarContent() {
                         </form>
 
                         {/* Hiển thị gợi ý sản phẩm */}
-                        {showSearchInput && suggestedProducts.length > 0 && (
+                        {showSearchInput && (
                            <div className='absolute top-full left-0 mt-1 bg-white rounded-md shadow-lg w-80 z-50'>
-                              <div className='py-2 px-3 bg-amber-50 border-b border-amber-100'>
-                                 <p className='text-sm font-medium text-amber-800'>Sản phẩm nổi bật</p>
-                              </div>
-                              <div className='max-h-80 overflow-y-auto'>
-                                 {isLoadingSuggestions ? (
-                                    <div className='flex justify-center items-center py-4'>
-                                       <div className='animate-spin rounded-full h-5 w-5 border-b-2 border-amber-700'></div>
+                              {/* Hiển thị gợi ý từ khóa khi người dùng đang nhập */}
+                              {searchQuery.length >= 2 && (
+                                 <div className='py-2 px-3 border-b border-amber-100'>
+                                    {isLoadingKeywords ? (
+                                       <div className='flex justify-center items-center py-2'>
+                                          <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-amber-700'></div>
+                                       </div>
+                                    ) : suggestedKeywords.length > 0 ? (
+                                       <>
+                                          <p className='text-sm font-medium text-amber-800 mb-1'>Từ khóa gợi ý:</p>
+                                          <div className='flex flex-wrap gap-1'>
+                                             {suggestedKeywords.map((keyword, index) => {
+                                                // Kiểm tra xem từ khóa có phải là sản phẩm thực không
+                                                const isRealProduct = allProducts.some(product => product.name === keyword);
+
+                                                return (
+                                                   <button
+                                                      key={index}
+                                                      className={`text-xs rounded-full px-2 py-1 flex items-center ${isRealProduct
+                                                         ? 'bg-amber-50 hover:bg-amber-100 text-amber-800'
+                                                         : 'bg-blue-50 hover:bg-blue-100 text-blue-800'
+                                                         }`}
+                                                      onClick={() => selectKeywordSuggestion(keyword)}
+                                                   >
+                                                      <span className="mr-1">{isRealProduct ? '🔍' : '✨'}</span> {keyword}
+                                                   </button>
+                                                );
+                                             })}
+                                          </div>
+                                       </>
+                                    ) : null}
+                                 </div>
+                              )}
+
+                              {/* Hiển thị sản phẩm gợi ý khi có kết quả và không đang nhập từ khóa */}
+                              {suggestedProducts.length > 0 && (
+                                 <>
+                                    <div className='py-2 px-3 bg-amber-50 border-b border-amber-100'>
+                                       <p className='text-sm font-medium text-amber-800'>Sản phẩm nổi bật</p>
                                     </div>
-                                 ) : (
-                                    suggestedProducts.map(product => (
+                                    <div className='max-h-80 overflow-y-auto'>
+                                       {isLoadingSuggestions ? (
+                                          <div className='flex justify-center items-center py-4'>
+                                             <div className='animate-spin rounded-full h-5 w-5 border-b-2 border-amber-700'></div>
+                                          </div>
+                                       ) : (
+                                          suggestedProducts.map(product => (
+                                             <Link
+                                                href={`/user/products/${product.id}`}
+                                                key={product.id}
+                                                onClick={() => {
+                                                   closeSearchInput();
+                                                   if (mobileMenuOpen) {
+                                                      setMobileMenuOpen(false);
+                                                   }
+                                                }}
+                                             >
+                                                <div className='flex items-center p-2 hover:bg-gray-50'>
+                                                   {product.imageUrl && (
+                                                      <div className='w-12 h-12 rounded overflow-hidden mr-3'>
+                                                         <Image
+                                                            src={product.imageUrl}
+                                                            alt={product.name}
+                                                            width={48}
+                                                            height={48}
+                                                            className='object-cover w-full h-full'
+                                                         />
+                                                      </div>
+                                                   )}
+                                                   <div>
+                                                      <p className='text-sm font-medium text-gray-800'>{product.name}</p>
+                                                      <div className='flex items-center'>
+                                                         {/* Hiển thị rating */}
+                                                         {[1, 2, 3, 4, 5].map((star) => (
+                                                            <svg
+                                                               key={star}
+                                                               xmlns='http://www.w3.org/2000/svg'
+                                                               className={`h-3 w-3 ${star <= Math.round(product.rating) ? 'text-yellow-400' : 'text-gray-300'}`}
+                                                               viewBox='0 0 20 20'
+                                                               fill='currentColor'
+                                                            >
+                                                               <path d='M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z' />
+                                                            </svg>
+                                                         ))}
+                                                         <span className='text-xs text-gray-500 ml-1'>
+                                                            ({product.rating.toFixed(1)})
+                                                         </span>
+                                                      </div>
+                                                   </div>
+                                                </div>
+                                             </Link>
+                                          ))
+                                       )}
+                                    </div>
+                                    <div className='border-t border-gray-100 py-2 px-3'>
                                        <Link
-                                          href={`/user/products/${product.id}`}
-                                          key={product.id}
+                                          href='/user/products'
+                                          className='text-xs text-amber-600 hover:text-amber-700 font-medium'
                                           onClick={() => {
                                              closeSearchInput();
                                              if (mobileMenuOpen) {
@@ -685,57 +989,11 @@ function NavBarContent() {
                                              }
                                           }}
                                        >
-                                          <div className='flex items-center p-2 hover:bg-gray-50'>
-                                             {product.imageUrl && (
-                                                <div className='w-12 h-12 rounded overflow-hidden mr-3'>
-                                                   <Image
-                                                      src={product.imageUrl}
-                                                      alt={product.name}
-                                                      width={48}
-                                                      height={48}
-                                                      className='object-cover w-full h-full'
-                                                   />
-                                                </div>
-                                             )}
-                                             <div>
-                                                <p className='text-sm font-medium text-gray-800'>{product.name}</p>
-                                                <div className='flex items-center'>
-                                                   {/* Hiển thị rating */}
-                                                   {[1, 2, 3, 4, 5].map((star) => (
-                                                      <svg
-                                                         key={star}
-                                                         xmlns='http://www.w3.org/2000/svg'
-                                                         className={`h-3 w-3 ${star <= Math.round(product.rating) ? 'text-yellow-400' : 'text-gray-300'}`}
-                                                         viewBox='0 0 20 20'
-                                                         fill='currentColor'
-                                                      >
-                                                         <path d='M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z' />
-                                                      </svg>
-                                                   ))}
-                                                   <span className='text-xs text-gray-500 ml-1'>
-                                                      ({product.rating.toFixed(1)})
-                                                   </span>
-                                                </div>
-                                             </div>
-                                          </div>
+                                          Xem tất cả sản phẩm
                                        </Link>
-                                    ))
-                                 )}
-                              </div>
-                              <div className='border-t border-gray-100 py-2 px-3'>
-                                 <Link
-                                    href='/user/products'
-                                    className='text-xs text-amber-600 hover:text-amber-700 font-medium'
-                                    onClick={() => {
-                                       closeSearchInput();
-                                       if (mobileMenuOpen) {
-                                          setMobileMenuOpen(false);
-                                       }
-                                    }}
-                                 >
-                                    Xem tất cả sản phẩm
-                                 </Link>
-                              </div>
+                                    </div>
+                                 </>
+                              )}
                            </div>
                         )}
                      </div>
@@ -812,7 +1070,7 @@ function NavBarContent() {
                            className='w-full p-2 border border-[#553C26] rounded-lg'
                            placeholder='Tìm kiếm...'
                            value={searchQuery}
-                           onChange={(e) => setSearchQuery(e.target.value)}
+                           onChange={handleSearchInputChange}
                         />
                         <button
                            type='submit'

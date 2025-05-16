@@ -148,26 +148,23 @@ export default function FinancePage() {
       // Kích hoạt animation khi component mount
       setAnimateStats(true);
 
-      // Fetch statistics data
-      fetchStatisticsData();
-
-      // Fetch orders data
+      // Fetch orders data (always needed)
       fetchOrdersData();
-
-      // Generate sample historical data for the chart
-      generateSampleHistoricalData();
 
       // Setup chart options
       setupChartOptions();
 
-      // Update chart based on selected view
+      // Determine what data to fetch/display based on the view
       if (chartView === 'current') {
+         // For current period view, fetch only current period statistics
+         fetchStatisticsData();
          updateCurrentPeriodChart();
       } else {
-         updateHistoricalChart();
+         // For historical view, fetch historical data across all periods
+         fetchHistoricalData();
       }
 
-      // Add this line to your existing useEffect that handles initial data loading
+      // Always fetch new customers data
       fetchNewCustomers();
    }, [timeFilter, timeValue, year, chartView]);
 
@@ -200,7 +197,7 @@ export default function FinancePage() {
    const fetchOrdersData = async () => {
       setOrdersLoading(true);
       try {
-         const response = await fetch('/api/orders/all');
+         const response = await fetch(`${HOST}/api/orders/all`);
          if (!response.ok) {
             throw new Error('Failed to fetch orders data');
          }
@@ -299,27 +296,27 @@ export default function FinancePage() {
       const newTimeFilter = event.target.value as string;
       setTimeFilter(newTimeFilter);
 
-      // Reset timeValue based on new filter
-      if (newTimeFilter === 'month') {
-         setTimeValue(4); // Default to April
-      } else if (newTimeFilter === 'week') {
-         setTimeValue(16); // Example week number
+      // Set time value based on the filter and chart view
+      const now = new Date();
+
+      if (chartView === 'current') {
+         // Set to current period based on the new filter
+         if (newTimeFilter === 'month') {
+            setTimeValue(now.getMonth() + 1); // Current month (1-12)
+         } else if (newTimeFilter === 'week') {
+            // Calculate current week number
+            const start = new Date(now.getFullYear(), 0, 1);
+            const weekNumber = Math.ceil((((now.getTime() - start.getTime()) / 86400000) + start.getDay() + 1) / 7);
+            setTimeValue(weekNumber);
+         } else {
+            setTimeValue(now.getFullYear()); // Current year
+         }
       } else {
-         setTimeValue(2025); // Current year
+         // Historical view - filter doesn't change the timeValue
+         // Just update the data with the new filter type
       }
 
-      // Cập nhật lại dữ liệu khi thay đổi bộ lọc
-      setTimeout(() => {
-         generateSampleHistoricalData();
-         setupChartOptions();
-
-         if (chartView === 'current') {
-            updateCurrentPeriodChart();
-         } else {
-            // Gọi sau khi đã cập nhật historicalData
-            updateHistoricalChart();
-         }
-      }, 0);
+      // The useEffect will handle data fetching due to timeFilter change
    };
 
    const stats = [
@@ -700,30 +697,69 @@ export default function FinancePage() {
 
    // Nếu không có API lịch sử, chúng ta có thể tạo dữ liệu mẫu:
    const generateSampleHistoricalData = () => {
-      // Ghi chú: Đã lọc theo các trạng thái hợp lệ: 
-      // 'Hoàn thành', 'Đã hoàn thành đổi trả và hoàn tiền', 'Hoàn tiền thất bại', 'Đã từ chối đổi trả'
-      let sampleData = [];
+      const sampleData = [];
+      const currentYear = new Date().getFullYear();
 
       if (timeFilter === 'month') {
-         sampleData = [
-            { timeValue: 1, totalRevenue: 1200000, totalOrderValue: 1100000, totalShippingFee: 100000, totalOrders: 2 },
-            { timeValue: 2, totalRevenue: 1500000, totalOrderValue: 1400000, totalShippingFee: 100000, totalOrders: 2 },
-            { timeValue: 3, totalRevenue: 1800000, totalOrderValue: 1700000, totalShippingFee: 100000, totalOrders: 3 },
-            { timeValue: 4, totalRevenue: 1750000, totalOrderValue: 1640000, totalShippingFee: 110000, totalOrders: 3 }
-         ];
+         // Generate data for all 12 months
+         for (let month = 1; month <= 12; month++) {
+            // Create a base revenue that increases gradually with some randomization
+            const baseRevenue = 800000 + (month * 100000) + (Math.random() * 300000);
+            const baseOrderValue = baseRevenue * 0.92; // 92% of revenue is order value
+            const baseShippingFee = baseRevenue * 0.08; // 8% is shipping fee
+            const orders = Math.floor(5 + (month * 0.5) + (Math.random() * 3));
+
+            sampleData.push({
+               timeValue: month,
+               totalRevenue: Math.round(baseRevenue),
+               totalOrderValue: Math.round(baseOrderValue),
+               totalShippingFee: Math.round(baseShippingFee),
+               totalOrders: orders
+            });
+         }
       } else if (timeFilter === 'week') {
-         sampleData = [
-            { timeValue: 13, totalRevenue: 420000, totalOrderValue: 400000, totalShippingFee: 20000, totalOrders: 1 },
-            { timeValue: 14, totalRevenue: 500000, totalOrderValue: 470000, totalShippingFee: 30000, totalOrders: 1 },
-            { timeValue: 15, totalRevenue: 620000, totalOrderValue: 590000, totalShippingFee: 30000, totalOrders: 1 },
-            { timeValue: 16, totalRevenue: 850000, totalOrderValue: 800000, totalShippingFee: 50000, totalOrders: 2 }
-         ];
+         // Generate data for all 52 weeks
+         for (let week = 1; week <= 52; week++) {
+            // Create a pattern where sales peak in certain periods
+            let seasonMultiplier = 1;
+            // Sales peak during holidays (weeks 48-52, 13-16, 26-30)
+            if ((week >= 48 && week <= 52) || (week >= 13 && week <= 16) || (week >= 26 && week <= 30)) {
+               seasonMultiplier = 1.5;
+            }
+
+            const baseRevenue = (200000 + (Math.random() * 150000)) * seasonMultiplier;
+            const baseOrderValue = baseRevenue * 0.93;
+            const baseShippingFee = baseRevenue * 0.07;
+            const orders = Math.floor(2 + (Math.random() * 3) * seasonMultiplier);
+
+            sampleData.push({
+               timeValue: week,
+               totalRevenue: Math.round(baseRevenue),
+               totalOrderValue: Math.round(baseOrderValue),
+               totalShippingFee: Math.round(baseShippingFee),
+               totalOrders: orders
+            });
+         }
       } else {
-         sampleData = [
-            { timeValue: 2023, totalRevenue: 12500000, totalOrderValue: 11800000, totalShippingFee: 700000, totalOrders: 25 },
-            { timeValue: 2024, totalRevenue: 15800000, totalOrderValue: 14900000, totalShippingFee: 900000, totalOrders: 32 },
-            { timeValue: 2025, totalRevenue: 6500000, totalOrderValue: 6100000, totalShippingFee: 400000, totalOrders: 12 }
-         ];
+         // Generate data for 5 years (current year - 2 to current year + 2)
+         for (let yearOffset = -2; yearOffset <= 2; yearOffset++) {
+            const year = currentYear + yearOffset;
+            // Growth trend over years
+            const yearMultiplier = 0.8 + (yearOffset + 2) * 0.15;
+
+            const baseRevenue = 10000000 * yearMultiplier;
+            const baseOrderValue = baseRevenue * 0.94;
+            const baseShippingFee = baseRevenue * 0.06;
+            const orders = Math.floor(100 * yearMultiplier);
+
+            sampleData.push({
+               timeValue: year,
+               totalRevenue: Math.round(baseRevenue),
+               totalOrderValue: Math.round(baseOrderValue),
+               totalShippingFee: Math.round(baseShippingFee),
+               totalOrders: orders
+            });
+         }
       }
 
       setHistoricalData(sampleData);
@@ -802,10 +838,17 @@ export default function FinancePage() {
    };
 
    // Add this function for updating historical chart
-   const updateHistoricalChart = () => {
-      if (historicalData.length === 0) return;
+   const updateHistoricalChart = (data?: Array<{
+      timeValue: number;
+      totalRevenue: number;
+      totalOrderValue: number;
+      totalShippingFee: number;
+      totalOrders: number;
+   }>) => {
+      const dataToUse = data || historicalData;
+      if (dataToUse.length === 0) return;
 
-      const labels = historicalData.map(item => { // Sửa từ sampleData thành historicalData
+      const labels = dataToUse.map(item => {
          if (timeFilter === 'month') return `T${item.timeValue}`;
          if (timeFilter === 'week') return `Tuần ${item.timeValue}`;
          return `${item.timeValue}`;
@@ -816,21 +859,21 @@ export default function FinancePage() {
          datasets: [
             {
                label: 'Tổng doanh thu',
-               data: historicalData.map(item => item.totalRevenue),
+               data: dataToUse.map(item => item.totalRevenue),
                backgroundColor: 'rgba(59, 130, 246, 0.5)',
                borderColor: 'rgb(59, 130, 246)',
                borderWidth: 1,
             },
             {
                label: 'Tổng giá trị đơn hàng',
-               data: historicalData.map(item => item.totalOrderValue),
+               data: dataToUse.map(item => item.totalOrderValue),
                backgroundColor: 'rgba(168, 85, 247, 0.5)',
                borderColor: 'rgb(168, 85, 247)',
                borderWidth: 1,
             },
             {
                label: 'Tổng phí vận chuyển',
-               data: historicalData.map(item => item.totalShippingFee),
+               data: dataToUse.map(item => item.totalShippingFee),
                backgroundColor: 'rgba(34, 197, 94, 0.5)',
                borderColor: 'rgb(34, 197, 94)',
                borderWidth: 1,
@@ -850,7 +893,6 @@ export default function FinancePage() {
       return validStatuses.includes(status);
    };
 
-   // Add this function inside your component:
    const fetchNewCustomers = async () => {
       try {
          const token = localStorage.getItem('token');
@@ -868,24 +910,47 @@ export default function FinancePage() {
          const sevenDaysAgo = new Date();
          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-         // Filter customers created within the last 7 days
-         const recentCustomers = data.data
-            .filter((user: { createdAt: string; role: { name: string } }) => {
-               const createdAt = new Date(user.createdAt);
-               return createdAt >= sevenDaysAgo && user.role.name === "User";
-            })
-            .map((user: { id: number; firstName: string; lastName: string; email: string; createdAt: string; phone?: number | null }) => ({
-               id: user.id,
-               firstName: user.firstName || '',
-               lastName: user.lastName || '',
-               email: user.email,
-               createdAt: user.createdAt,
-               phone: user.phone
-            }));
+         // Handle the case where the API returns an array directly
+         if (Array.isArray(data)) {
+            // Filter customers created within the last 7 days
+            const recentCustomers = data
+               .filter((user: { createdAt: string; role: { name: string } }) => {
+                  const createdAt = new Date(user.createdAt);
+                  return createdAt >= sevenDaysAgo && user.role && user.role.name === "User";
+               })
+               .map((user: { id: number; firstName: string; lastName: string; email: string; createdAt: string; phone?: number | null }) => ({
+                  id: user.id,
+                  firstName: user.firstName || '',
+                  lastName: user.lastName || '',
+                  email: user.email,
+                  createdAt: user.createdAt,
+                  phone: user.phone
+               }));
 
-         setNewCustomers(recentCustomers);
-      } catch {
-         console.error('Error fetching new customers:');
+            setNewCustomers(recentCustomers);
+         }
+         // Handle the original format where data is inside data.data
+         else if (data && data.data) {
+            const recentCustomers = data.data
+               .filter((user: { createdAt: string; role: { name: string } }) => {
+                  const createdAt = new Date(user.createdAt);
+                  return createdAt >= sevenDaysAgo && user.role.name === "User";
+               })
+               .map((user: { id: number; firstName: string; lastName: string; email: string; createdAt: string; phone?: number | null }) => ({
+                  id: user.id,
+                  firstName: user.firstName || '',
+                  lastName: user.lastName || '',
+                  email: user.email,
+                  createdAt: user.createdAt,
+                  phone: user.phone
+               }));
+
+            setNewCustomers(recentCustomers);
+         } else {
+            console.error('Invalid response format:', data);
+         }
+      } catch (error) {
+         console.error('Error fetching new customers:', error);
       }
    };
 
@@ -896,6 +961,108 @@ export default function FinancePage() {
          return formatDistanceToNow(date, { addSuffix: true, locale: vi });
       } catch {
          return 'Không xác định';
+      }
+   };
+
+   const fetchHistoricalData = async () => {
+      try {
+         setLoading(true);
+         let allData = [];
+
+         if (timeFilter === 'week') {
+            // Fetch data for all 52 weeks
+            const promises = [];
+            for (let week = 1; week <= 52; week++) {
+               promises.push(
+                  fetch(`${HOST}/api/orders/statistics?timeFilter=week&timeValue=${week}&year=${year}`)
+                     .then(res => res.ok ? res.json() : null)
+               );
+            }
+            const results = await Promise.all(promises);
+            allData = results.filter(Boolean).map((data, index) => ({
+               timeValue: index + 1,
+               totalRevenue: data.totalRevenue || 0,
+               totalOrderValue: data.totalOrderValue || 0,
+               totalShippingFee: data.totalShippingFee || 0,
+               totalOrders: data.totalOrders || 0
+            }));
+         } else if (timeFilter === 'month') {
+            // Fetch data for all 12 months
+            const promises = [];
+            for (let month = 1; month <= 12; month++) {
+               promises.push(
+                  fetch(`${HOST}/api/orders/statistics?timeFilter=month&timeValue=${month}&year=${year}`)
+                     .then(res => res.ok ? res.json() : null)
+               );
+            }
+            const results = await Promise.all(promises);
+            allData = results.filter(Boolean).map((data, index) => ({
+               timeValue: index + 1,
+               totalRevenue: data.totalRevenue || 0,
+               totalOrderValue: data.totalOrderValue || 0,
+               totalShippingFee: data.totalShippingFee || 0,
+               totalOrders: data.totalOrders || 0
+            }));
+         } else {
+            // Sửa đổi cho lọc theo năm
+            const currentYear = new Date().getFullYear();
+            const startYear = currentYear - 2;
+            const endYear = currentYear + 2;
+
+            const promises = [];
+            for (let yearVal = startYear; yearVal <= endYear; yearVal++) {
+               // Bỏ tham số timeValue khi lọc theo năm
+               promises.push(
+                  fetch(`${HOST}/api/orders/statistics?timeFilter=year&year=${yearVal}`)
+                     .then(res => res.ok ? res.json() : null)
+               );
+            }
+            const results = await Promise.all(promises);
+            console.log("Year filter API results:", results); // Log kết quả API
+
+            allData = results.filter(Boolean).map((data, index) => ({
+               timeValue: startYear + index,
+               totalRevenue: data?.totalRevenue || 0,
+               totalOrderValue: data?.totalOrderValue || 0,
+               totalShippingFee: data?.totalShippingFee || 0,
+               totalOrders: data?.totalOrders || 0
+            }));
+         }
+
+         if (allData.length > 0) {
+            console.log("Historical data processed:", allData);
+            setHistoricalData(allData);
+            updateHistoricalChart(allData);
+         } else {
+            console.log("No historical data returned, falling back to sample data");
+            // Sử dụng dữ liệu mẫu khi không có dữ liệu thật
+            generateSampleHistoricalData();
+         }
+      } catch (error) {
+         console.error('Error fetching historical data:', error);
+         // Fallback to sample data on error
+         generateSampleHistoricalData();
+      } finally {
+         setLoading(false);
+      }
+   };
+
+   const handleChartViewChange = (view: 'current' | 'historical') => {
+      setChartView(view);
+
+      // If switching to current view, update timeValue to current period
+      if (view === 'current') {
+         const now = new Date();
+         if (timeFilter === 'month') {
+            setTimeValue(now.getMonth() + 1); // current month (1-12)
+         } else if (timeFilter === 'week') {
+            // Calculate current week number
+            const start = new Date(now.getFullYear(), 0, 1);
+            const weekNumber = Math.ceil((((now.getTime() - start.getTime()) / 86400000) + start.getDay() + 1) / 7);
+            setTimeValue(weekNumber);
+         } else {
+            setTimeValue(now.getFullYear()); // current year
+         }
       }
    };
 
@@ -931,9 +1098,9 @@ export default function FinancePage() {
                               value={timeFilter}
                               onChange={handleTimeFilterChange}
                            >
-                              <option value="week">Tuần này</option>
-                              <option value="month">Tháng này</option>
-                              <option value="year">Năm nay</option>
+                              <option value="week">Tuần</option>
+                              <option value="month">Tháng</option>
+                              <option value="year">Năm</option>
                            </select>
                         </div>
 
@@ -1025,7 +1192,7 @@ export default function FinancePage() {
 
                               <div className="inline-flex rounded-md shadow-sm">
                                  <button
-                                    onClick={() => setChartView('current')}
+                                    onClick={() => handleChartViewChange('current')}
                                     className={`px-4 py-2 text-sm font-medium rounded-l-lg ${chartView === 'current'
                                        ? 'bg-amber-500 text-white'
                                        : 'bg-white text-gray-700 hover:bg-gray-50'
@@ -1034,7 +1201,7 @@ export default function FinancePage() {
                                     Kỳ hiện tại
                                  </button>
                                  <button
-                                    onClick={() => setChartView('historical')}
+                                    onClick={() => handleChartViewChange('historical')}
                                     className={`px-4 py-2 text-sm font-medium rounded-r-lg ${chartView === 'historical'
                                        ? 'bg-amber-500 text-white'
                                        : 'bg-white text-gray-700 hover:bg-gray-50'
@@ -1052,6 +1219,23 @@ export default function FinancePage() {
                                  </div>
                               ) : (
                                  <Bar options={chartOptions} data={chartData} />
+                              )}
+                           </div>
+                           <div className="mt-4 text-center text-sm text-gray-500">
+                              {chartView === 'current' ? (
+                                 <span>Đang hiển thị dữ liệu cho {timeFilter === 'month'
+                                    ? `Tháng ${timeValue}/${year}`
+                                    : timeFilter === 'week'
+                                       ? `Tuần ${timeValue}/${year}`
+                                       : `Năm ${timeValue}`}
+                                 </span>
+                              ) : (
+                                 <span>Đang hiển thị dữ liệu lịch sử cho tất cả {timeFilter === 'month'
+                                    ? 'các tháng'
+                                    : timeFilter === 'week'
+                                       ? 'các tuần'
+                                       : 'các năm'}
+                                 </span>
                               )}
                            </div>
                         </section>

@@ -9,6 +9,7 @@ import Footer from '@/app/components/user/footer/page';
 import ViewedCarousel from '@/app/components/user/viewedcarousel/page';
 import { incrementCartBadge } from '@/app/utils/cartBadgeManager';
 import { HOST } from '@/app/constants/api';
+import StarRating from '@/app/components/StarRating';
 
 interface ProductImage {
    id: string;
@@ -83,26 +84,7 @@ const calculateDiscountedPrice = (basePrice: number, discountPercentage: number 
    return basePrice - basePrice * (discountPercentage / 100);
 };
 
-// Thêm component hiển thị sao
-const StarDisplay = ({ rating }: { rating: number }) => {
-   return (
-      <div className="flex">
-         {[1, 2, 3, 4, 5].map((star) => (
-            <svg
-               key={star}
-               xmlns="http://www.w3.org/2000/svg"
-               className={`h-4 w-4 ${star <= rating ? 'text-yellow-400' : 'text-gray-300'}`}
-               viewBox="0 0 20 20"
-               fill="currentColor"
-            >
-               <path
-                  d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
-               />
-            </svg>
-         ))}
-      </div>
-   );
-};
+
 
 export default function ProductDetailPage() {
    const params = useParams();
@@ -350,22 +332,44 @@ export default function ProductDetailPage() {
          const users = await fetchAllUsers();
          console.log('Users fetched:', users.length);
 
+         // Cải thiện cách tạo userMap để tránh undefined
+         const userMap: Record<number, User> = {};
 
+         if (Array.isArray(users)) {
+            users.forEach((user: User) => {
+               if (user && typeof user.id === 'number') {
+                  userMap[user.id] = user;
+               }
+            });
+         }
 
-         const userMap = users.reduce((map: Record<number, User>, user: User) => {
-            map[user.id] = user;
-            return map;
-         }, {});
+         console.log('User map created with keys:', Object.keys(userMap).length);
 
          // Combine ratings with user information
          const formattedRatings = validRatings.map(rating => {
             const user = userMap[rating.user_id];
+
+            // Cải thiện cách hiển thị tên người dùng
+            let userName = 'Khách hàng';
+            if (user) {
+               const firstName = user.firstName || '';
+               const lastName = user.lastName || '';
+               userName = (firstName + ' ' + lastName).trim();
+
+               // Nếu không có tên thì hiển thị ID
+               if (!userName) {
+                  userName = `Khách hàng #${rating.user_id}`;
+               }
+            } else {
+               userName = `Khách hàng #${rating.user_id}`;
+            }
+
             return {
                id: rating.id,
                product_id: parseInt(productId as string),
                user_id: rating.user_id,
-               user_name: user ? `${user.firstName} ${user.lastName}` : `Khách hàng ${rating.user_id}`,
-               avatar: user?.photo?.path || null,
+               user_name: userName,
+               avatar: user?.photo?.path ?? undefined,
                rating: rating.rating || rating.avg_rating || 5,
                comment: rating.comment || '',
                created_at: rating.created_at || new Date().toISOString()
@@ -400,7 +404,17 @@ export default function ProductDetailPage() {
          }
 
          const result = await response.json();
-         return result.data || [];
+         console.log("Users API response structure:", result); // Log để debug cấu trúc dữ liệu
+
+         // Xử lý cả hai trường hợp: API trả về mảng trực tiếp hoặc qua result.data
+         if (Array.isArray(result)) {
+            return result;
+         } else if (result && Array.isArray(result.data)) {
+            return result.data;
+         } else {
+            console.warn("Unknown user data structure:", result);
+            return [];
+         }
       } catch (error) {
          console.error('Error fetching users information:', error);
          return [];
@@ -932,6 +946,20 @@ export default function ProductDetailPage() {
                      </div>
                   </div>
 
+                  <div className="flex items-center mb-4">
+                     <div className="flex items-center">
+                        <StarRating
+                           rating={productRatings.length > 0
+                              ? productRatings.reduce((sum, r) => sum + r.rating, 0) / productRatings.length
+                              : 0
+                           }
+                           reviewCount={productRatings.length}
+                           size="md"
+                           showCount={true}
+                        />
+                     </div>
+                  </div>
+
                   <div className='mb-6 bg-gray-50 p-4 rounded'>
                      {selectedPriceInfo && (
                         <div className='flex items-center'>
@@ -1073,28 +1101,39 @@ export default function ProductDetailPage() {
 
                      {/* Quantity */}
                      <div className='flex items-center mb-4'>
-                        <span className='text-gray-700 w-24 fưont-medium'>Số lượng:</span>
+                        <span className='text-gray-700 w-24 font-medium'>Số lượng:</span>
                         <div className='flex shadow-sm'>
                            <button
                               className='border border-gray-300 px-3 py-1 rounded-l hover:bg-gray-100'
                               onClick={decreaseQuantity}
                               disabled={
-                                 !selectedDetail?.isActive || selectedDetail?.quantities <= 0
+                                 !selectedDetail?.isActive || selectedDetail?.quantities <= 0 || quantity <= 1
                               }
                            >
                               -
                            </button>
                            <input
-                              type='text'
-                              className='border-t border-b border-gray-300 w-12 text-center'
+                              min={1}
+                              max={selectedDetail?.quantities || 100}
+                              className='border-t border-b border-gray-300 w-16 text-center outline-none'
                               value={quantity}
-                              readOnly
+                              onChange={e => {
+                                 let val = parseInt(e.target.value, 10);
+                                 if (isNaN(val) || val < 1) val = 1;
+                                 if (selectedDetail?.quantities && val > selectedDetail.quantities) {
+                                    val = selectedDetail.quantities;
+                                 }
+                                 setQuantity(val);
+                              }}
+                              disabled={!selectedDetail?.isActive || selectedDetail?.quantities <= 0}
                            />
                            <button
                               className='border border-gray-300 px-3 py-1 rounded-r hover:bg-gray-100'
                               onClick={increaseQuantity}
                               disabled={
-                                 !selectedDetail?.isActive || selectedDetail?.quantities <= 0
+                                 !selectedDetail?.isActive ||
+                                 selectedDetail?.quantities <= 0 ||
+                                 quantity >= (selectedDetail?.quantities || 100)
                               }
                            >
                               +
@@ -1106,38 +1145,39 @@ export default function ProductDetailPage() {
 
 
                      <div className='grid grid-cols-1 gap-3 mb-2'>
-                        <button
-                           className='flex justify-center items-center bg-white border border-gray-300 py-2.5 text-sm text-gray-700 rounded hover:bg-gray-50 transition disabled:opacity-50'
-                           onClick={handleAddToCart}
-                           disabled={!selectedDetail?.isActive || selectedDetail?.quantities <= 0}
-                        >
-                           <svg
-                              xmlns='http://www.w3.org/2000/svg'
-                              className='h-4 w-4 mr-1'
-                              fill='none'
-                              viewBox='0 0 24 24'
-                              stroke='currentColor'
+                        <div className='flex space-x-3'>
+                           <button
+                              className='flex-1 flex justify-center items-center bg-white border border-gray-300 py-2.5 text-sm text-gray-700 rounded hover:bg-gray-50 transition disabled:opacity-50'
+                              onClick={handleAddToCart}
+                              disabled={!selectedDetail?.isActive || selectedDetail?.quantities <= 0}
                            >
-                              <path
-                                 strokeLinecap='round'
-                                 strokeLinejoin='round'
-                                 strokeWidth={2}
-                                 d='M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z'
-                              />
-                           </svg>
-                           <span>Thêm vào giỏ hàng</span>
-                        </button>
-                        <button
-                           className='bg-orange-700 border border-orange-700 py-3 text-sm text-white rounded hover:bg-orange-800 transition font-medium disabled:opacity-50 disabled:hover:bg-orange-700'
-                           onClick={handleBuyNow}
-                           disabled={!selectedDetail?.isActive || selectedDetail?.quantities <= 0}
-                        >
-                           Mua ngay
-                        </button>
+                              <svg
+                                 xmlns='http://www.w3.org/2000/svg'
+                                 className='h-4 w-4 mr-1'
+                                 fill='none'
+                                 viewBox='0 0 24 24'
+                                 stroke='currentColor'
+                              >
+                                 <path
+                                    strokeLinecap='round'
+                                    strokeLinejoin='round'
+                                    strokeWidth={2}
+                                    d='M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z'
+                                 />
+                              </svg>
+                              <span>Thêm vào giỏ hàng</span>
+                           </button>
+                           <button
+                              className='flex-1 bg-orange-700 border border-orange-700 py-3 text-sm text-white rounded hover:bg-orange-800 transition font-medium disabled:opacity-50 disabled:hover:bg-orange-700'
+                              onClick={handleBuyNow}
+                              disabled={!selectedDetail?.isActive || selectedDetail?.quantities <= 0}
+                           >
+                              Mua ngay
+                           </button>
+                        </div>
                         <button className='bg-orange-50 border border-orange-700 py-3 text-sm text-orange-700 rounded hover:bg-orange-100 transition font-medium'>
                            Nhắn tin với shop
                         </button>
-
                      </div>
                   </div>
                </div>
@@ -1211,12 +1251,7 @@ export default function ProductDetailPage() {
                                     {selectedDetail?.values || 'Không có thông tin'}
                                  </td>
                               </tr>
-                              <tr>
-                                 <td className='py-3 font-medium'>Hướng dẫn sử dụng</td>
-                                 <td className='py-3'>
-                                    Thắp nến trong không gian thoáng mát, tránh xa vật dễ cháy
-                                 </td>
-                              </tr>
+
                            </tbody>
                         </table>
                      </div>
@@ -1238,22 +1273,13 @@ export default function ProductDetailPage() {
                                     <p className="text-gray-500 text-sm">{productRatings.length} đánh giá</p>
                                  </div>
                                  <div className="flex items-center">
-                                    <div className="flex mr-2">
-                                       {Array(5).fill(0).map((_, i) => (
-                                          <svg
-                                             key={i}
-                                             xmlns="http://www.w3.org/2000/svg"
-                                             className={`h-5 w-5 ${i < Math.round(productRatings.reduce((sum, rating) => sum + rating.rating, 0) / productRatings.length) ? 'text-yellow-400' : 'text-gray-300'}`}
-                                             viewBox="0 0 20 20"
-                                             fill="currentColor"
-                                          >
-                                             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                          </svg>
-                                       ))}
-                                    </div>
-                                    <span className="font-medium">
-                                       {(productRatings.reduce((sum, rating) => sum + rating.rating, 0) / productRatings.length).toFixed(1)}
-                                       /5
+                                    <StarRating
+                                       rating={productRatings.reduce((sum, rating) => sum + rating.rating, 0) / productRatings.length}
+                                       size="md"
+                                       showCount={false}
+                                    />
+                                    <span className="ml-2 font-medium">
+                                       {(productRatings.reduce((sum, rating) => sum + rating.rating, 0) / productRatings.length).toFixed(1)}/5
                                     </span>
                                  </div>
                               </div>
@@ -1310,7 +1336,7 @@ export default function ProductDetailPage() {
                                                    {rating.created_at ? new Date(rating.created_at).toLocaleDateString('vi-VN') : 'Không có ngày'}
                                                 </span>
                                              </div>
-                                             <StarDisplay rating={rating.rating} />
+                                             <StarRating rating={rating.rating} size="sm" showCount={false} />
                                              <p className="mt-2 text-gray-700">{rating.comment || 'Không có bình luận'}</p>
                                           </div>
                                        </div>
