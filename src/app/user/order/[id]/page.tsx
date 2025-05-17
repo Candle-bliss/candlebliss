@@ -101,7 +101,7 @@ const orderStatusColors: Record<string, { bg: string; text: string; border: stri
    'Đang giao hàng': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
    'Đã giao hàng': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
    'Hoàn thành': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
-   'Đã hủy': { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
+   'Đã huỷ': { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
    'Đổi trả hàng': { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
    'Đã chấp nhận đổi trả': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
    'Đã từ chối đổi trả': { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
@@ -1682,8 +1682,8 @@ export default function OrderDetailPage() {
                            Quay lại danh sách đơn hàng
                         </Link>
 
-                        {/* Nút hủy đơn chỉ hiển thị với các trạng thái cho phép hủy */}
-                        {getValidNextStatuses(order.status).includes('Đã hủy') && (
+                        {/* Nút hủy đơn chỉ hiển thị khi trạng thái là "Đã đặt hàng" */}
+                        {order.status === 'Đã đặt hàng' && (
                            <button
                               onClick={handleCancelOrder}
                               className='block w-full py-2 text-center bg-red-600 rounded text-white hover:bg-red-700'
