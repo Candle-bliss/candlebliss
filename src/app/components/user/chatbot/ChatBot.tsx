@@ -107,11 +107,22 @@ export default function ChatBotModal() {
     setIsTyping(true);
 
     try {
-      const response = await fetch(`${window.location.origin}/api/chatbot`, {
+      // Sử dụng đường dẫn tuyệt đối với window.location.origin
+      const apiUrl = '/api/chatbot';
+      console.log('Calling chatbot API at:', apiUrl); // Debug log
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: messageText }),
       });
+
+      if (!response.ok) {
+        console.error(`API error: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
 
       const data = await response.json();
 
@@ -123,7 +134,8 @@ export default function ChatBotModal() {
       };
 
       setMessages((prev) => [...prev, aiMessage]);
-    } catch {
+    } catch (error) {
+      console.error('Chatbot API error:', error);
       // Fallback response if API fails
       const aiMessage: Message = {
         role: 'assistant',

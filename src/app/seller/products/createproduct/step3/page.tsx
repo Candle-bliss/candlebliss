@@ -544,10 +544,30 @@ export default function Step3() {
                                                 type='number'
                                                 className='w-full p-2 border rounded-md'
                                                 value={variant.basePrice || ''}
-                                                onChange={(e) => updateVariantPrice(index, 'basePrice', e.target.value)}
+                                                onChange={(e: { target: { value: string; }; }) => {
+                                                   const value = e.target.value;
+                                                   // Only update if the value is positive or empty
+                                                   if (value === '' || Number(value) >= 0) {
+                                                      updateVariantPrice(index, 'basePrice', value);
+                                                   } else {
+                                                      showToast('Giá sản phẩm không được âm', 'error');
+                                                   }
+                                                }}
                                                 placeholder='Nhập giá gốc'
+                                                min="0"
+                                                onInvalid={(e) => {
+                                                   const target = e.target as HTMLInputElement;
+                                                   if (Number(target.value) < 0) {
+                                                      target.setCustomValidity('Giá sản phẩm không được âm');
+                                                   } else if (target.value === '') {
+                                                      target.setCustomValidity('Vui lòng nhập giá gốc');
+                                                   } else {
+                                                      target.setCustomValidity('');
+                                                   }
+                                                }}
                                                 required
                                              />
+                                             <p className='text-xs text-gray-500 mt-1'>Giá gốc phải là số dương</p>
                                           </div>
                                           <div>
                                              <label className='block text-sm font-medium mb-1'>
@@ -559,14 +579,29 @@ export default function Step3() {
                                                 value={variant.discountPrice || ''}
                                                 onChange={(e) => {
                                                    const value = e.target.value;
-                                                   if (Number(value) >= 0 && Number(value) <= 100) {
+                                                   if (value === '' || (Number(value) >= 0 && Number(value) <= 100)) {
                                                       updateVariantPrice(index, 'discountPrice', value);
+                                                   } else if (Number(value) < 0) {
+                                                      showToast('Phần trăm khuyến mãi không được âm', 'error');
+                                                   } else if (Number(value) > 100) {
+                                                      showToast('Phần trăm khuyến mãi không được vượt quá 100%', 'error');
                                                    }
                                                 }}
                                                 min='0'
                                                 max='100'
                                                 placeholder='Nhập % khuyến mãi (nếu có)'
+                                                onInvalid={(e) => {
+                                                   const target = e.target as HTMLInputElement;
+                                                   if (Number(target.value) < 0) {
+                                                      target.setCustomValidity('Phần trăm khuyến mãi không được âm');
+                                                   } else if (Number(target.value) > 100) {
+                                                      target.setCustomValidity('Phần trăm khuyến mãi không được vượt quá 100%');
+                                                   } else {
+                                                      target.setCustomValidity('');
+                                                   }
+                                                }}
                                              />
+                                             <p className='text-xs text-gray-500 mt-1'>Phần trăm khuyến mãi từ 0% đến 100%</p>
                                           </div>
 
                                           {/* Thêm ngày bắt đầu và kết thúc cho variant */}
@@ -608,7 +643,7 @@ export default function Step3() {
                                                 <span className='text-sm font-medium'>Giá hiển thị:</span>
                                                 {variant.discountPrice && Number(variant.discountPrice) > 0 ? (
                                                    <div className='text-right'>
-                                                      <span className='font-bold bg-amber-600 '>
+                                                      <span className='font-bold  '>
                                                          {variant.calculatedPrice
                                                             ? `${Number(variant.calculatedPrice).toLocaleString('vi-VN')} VNĐ`
                                                             : '0 VNĐ'}
@@ -625,7 +660,7 @@ export default function Step3() {
                                                       </div>
                                                    </div>
                                                 ) : (
-                                                   <span className='font-bold bg-amber-600'>
+                                                   <span className='font-bold '>
                                                       {variant.basePrice
                                                          ? `${Number(variant.basePrice).toLocaleString('vi-VN')} VNĐ`
                                                          : '0 VNĐ'}
