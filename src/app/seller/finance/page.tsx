@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Header from '@/app/components/seller/header/page';
 import Sidebar from '@/app/components/seller/menusidebar/page';
-import { useEffect, useState, SetStateAction, useCallback, useMemo } from 'react';
+import { useEffect, useState, SetStateAction, useCallback, useMemo, useRef } from 'react';
 import {
    Search,
    DollarSign,
@@ -22,6 +22,7 @@ import {
    CategoryScale,
    LinearScale,
    BarElement,
+   ArcElement,
    Title,
    Tooltip,
    Legend,
@@ -31,6 +32,7 @@ Chart.register(
    CategoryScale,
    LinearScale,
    BarElement,
+   ArcElement,
    Title,
    Tooltip,
    Legend
@@ -48,6 +50,7 @@ interface OrderItem {
    product_detail_id: number;
    quantity: number;
    totalPrice: string;
+   product_id: string;
 }
 
 // Define interface for user
@@ -75,12 +78,7 @@ interface Order {
    user?: User; // Thêm trường user
 }
 
-// Rename this interface to avoid conflicts with the imported ChartData
-interface FinanceChartData {
-   totalRevenue: number;
-   totalOrderValue: number;
-   totalShippingFee: number;
-}
+
 
 // Add this new interface:
 interface NewCustomer {
@@ -93,6 +91,12 @@ interface NewCustomer {
 }
 
 export default function FinancePage() {
+   // Add this with your other refs at the top level of your component
+
+   const needsRefresh = useRef(true); // Move this here, outside of useEffect
+   const prevPeriodFetchedRef = useRef(false); // Add this ref to track previous period fetch status
+
+   // Your existing state declarations
    const [searchTerm, setSearchTerm] = useState('');
    const [currentTab, setCurrentTab] = useState('overview');
    const [animateStats, setAnimateStats] = useState(false);
@@ -107,6 +111,7 @@ export default function FinancePage() {
    });
    const [orders, setOrders] = useState<Order[]>([]);
    const [loading, setLoading] = useState(true);
+   // Thêm biến state này thay vì sử dụng const
    const [ordersLoading, setOrdersLoading] = useState(true);
    const [chartData, setChartData] = useState<{
       labels: string[];
@@ -139,221 +144,644 @@ export default function FinancePage() {
    }>>([]);
 
    // Add this state
-   const [chartView, setChartView] = useState<'current' | 'historical'>('historical');
+   const [chartView, setChartView] = useState<'current' | 'historical'>('current');
 
    // Add this state inside your component:
    const [newCustomers, setNewCustomers] = useState<NewCustomer[]>([]);
 
-   useEffect(() => {
-      // Kích hoạt animation khi component mount
-      setAnimateStats(true);
+   // Add these new states for date range filter
+   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
+   const [startDate, setStartDate] = useState(new Date());
+   const [endDate, setEndDate] = useState(new Date());
+   const [previousPeriodData, setPreviousPeriodData] = useState({
+      totalRevenue: 0,
+      totalOrderValue: 0,
+      totalShippingFee: 0,
+      totalOrders: 0
+   });
 
-      // Fetch orders data (always needed)
-      fetchOrdersData();
+   const [comparisonStats, setComparisonStats] = useState({
+      revenueChange: 0,
+      orderValueChange: 0,
+      shippingFeeChange: 0,
+      ordersChange: 0
+   });
 
-      // Setup chart options
-      setupChartOptions();
+   const [currentPage, setCurrentPage] = useState(1);
+   const [ordersPerPage] = useState(20);
 
-      // Determine what data to fetch/display based on the view
-      if (chartView === 'current') {
-         // For current period view, fetch only current period statistics
-         fetchStatisticsData();
-         updateCurrentPeriodChart();
+   const [categoryStats] = useState<Array<{
+      id: number;
+      name: string;
+      count: number;
+      totalSales: number;
+   }>>([]);
+   const [productGroups, setProductGroups] = useState<Record<string, {
+      name: string,
+      count: number,
+      revenue: number,
+      isDeleted?: boolean
+   }>>({});
+
+   // Thêm state để lưu trữ thông tin sản phẩm
+   const [productsInfo, setProductsInfo] = useState<Record<string, {
+      name: string;
+      image?: string;
+      isDeleted?: boolean;
+   }>>({});
+
+
+   // Component hiển thị điều khiển phân trang
+   const Pagination = () => {
+      // Không hiển thị nếu chỉ có 1 trang
+      if (totalPages <= 1) return null;
+
+      // Tạo mảng các số trang hiển thị
+      let pageNumbers = [];
+      const maxPagesToShow = 5; // Số lượng nút trang hiển thị tối đa
+
+      if (totalPages <= maxPagesToShow) {
+         // Hiển thị tất cả các trang nếu ít hơn maxPagesToShow
+         pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
       } else {
-         // For historical view, fetch historical data across all periods
-         fetchHistoricalData();
+         // Hiển thị các trang xung quanh trang hiện tại
+         let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+         let endPage = startPage + maxPagesToShow - 1;
+
+         if (endPage > totalPages) {
+            endPage = totalPages;
+            startPage = Math.max(1, endPage - maxPagesToShow + 1);
+         }
+
+         pageNumbers = Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
       }
 
-      // Always fetch new customers data
-      fetchNewCustomers();
-   }, [timeFilter, timeValue, year, chartView]);
+      return (
+         <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+               <div>
+                  <p className="text-sm text-gray-700">
+                     Đang hiển thị <span className="font-medium">{indexOfFirstOrder + 1}</span> - <span className="font-medium">
+                        {Math.min(indexOfLastOrder, filteredOrders.length)}</span> trong tổng số <span className="font-medium">{filteredOrders.length}</span> đơn hàng
+                  </p>
+               </div>
+               <div>
+                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                     {/* Nút Previous */}
+                     <button
+                        onClick={() => paginate(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50'}`}
+                     >
+                        <span className="sr-only">Trang trước</span>
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                     </button>
 
-   // Modify the fetchStatisticsData function to properly filter orders
-   const fetchStatisticsData = async () => {
-      setLoading(true);
+                     {/* Hiển thị nút "..." đầu tiên nếu cần */}
+                     {!pageNumbers.includes(1) && (
+                        <>
+                           <button onClick={() => paginate(1)} className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                              1
+                           </button>
+                           <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                              ...
+                           </span>
+                        </>
+                     )}
+
+                     {/* Hiển thị các nút số trang */}
+                     {pageNumbers.map(number => (
+                        <button
+                           key={number}
+                           onClick={() => paginate(number)}
+                           className={`relative inline-flex items-center px-4 py-2 border ${currentPage === number ? 'bg-amber-50 border-amber-500 text-amber-600 z-10' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'} text-sm font-medium`}
+                        >
+                           {number}
+                        </button>
+                     ))}
+
+                     {/* Hiển thị nút "..." cuối cùng nếu cần */}
+                     {!pageNumbers.includes(totalPages) && (
+                        <>
+                           <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                              ...
+                           </span>
+                           <button onClick={() => paginate(totalPages)} className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                              {totalPages}
+                           </button>
+                        </>
+                     )}
+
+                     {/* Nút Next */}
+                     <button
+                        onClick={() => paginate(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${currentPage === totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50'}`}
+                     >
+                        <span className="sr-only">Trang tiếp</span>
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                     </button>
+                  </nav>
+               </div>
+            </div>
+
+            {/* Hiển thị cho màn hình nhỏ */}
+            <div className="flex items-center justify-between w-full sm:hidden">
+               <button
+                  onClick={() => paginate(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+               >
+                  Trước
+               </button>
+               <span className="text-sm text-gray-700">
+                  Trang <span className="font-medium">{currentPage}</span> / <span className="font-medium">{totalPages}</span>
+               </span>
+               <button
+                  onClick={() => paginate(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${currentPage === totalPages ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+               >
+                  Tiếp
+               </button>
+            </div>
+         </div>
+      )
+   };
+
+   // Hàm phân tích sản phẩm trong đơn hàng (sửa lại)
+   const analyzeProductGroups = useCallback(() => {
+      if (orders.length === 0) return;
+
+      console.log("Analyzing product groups - should run once per data change");
+
+      // Only proceed if we have data to analyze
+      const groups: Record<string, {
+         name: string,
+         count: number,
+         revenue: number,
+         isDeleted: boolean
+      }> = {};
+
+      // Trước tiên, đặt isDeleted dựa trên thông tin sản phẩm
+      Object.keys(productsInfo).forEach(productId => {
+         groups[productId] = {
+            name: productsInfo[productId]?.name || `Sản phẩm #${productId}`,
+            count: 0,
+            revenue: 0,
+            isDeleted: productsInfo[productId]?.isDeleted || false
+         };
+      });
+
+      // Duyệt qua tất cả đơn hàng đã hoàn thành
+      orders.forEach(order => {
+         if (!isRevenueCountableStatus(order.status) || !order.item) return;
+
+         order.item.forEach(item => {
+            const productId = item.product_id;
+            if (!productId) return;
+
+            // Nếu sản phẩm chưa có trong groups, khởi tạo
+            if (!groups[productId]) {
+               groups[productId] = {
+                  name: productsInfo[productId]?.name || `Sản phẩm #${productId}`,
+                  count: 0,
+                  revenue: 0,
+                  // Lấy trạng thái isDeleted từ productsInfo nếu có
+                  isDeleted: productsInfo[productId]?.isDeleted || false
+               };
+            }
+
+            groups[productId].count += item.quantity;
+            groups[productId].revenue += parseInt(item.totalPrice);
+         });
+      });
+
+      console.log("Analyzed product groups:", groups); // Log để debug
+
+      // Use functional update to prevent unnecessary renders
+      setProductGroups(prevGroups => {
+         // Only update if there are actually changes
+         if (JSON.stringify(prevGroups) === JSON.stringify(groups)) {
+            return prevGroups; // No change needed
+         }
+         return groups;
+      });
+   }, [orders, productsInfo]); // Thêm productsInfo vào dependencies
+
+   // Thêm hàm này sau fetchStatisticsData
+   const fetchPreviousPeriodData = useCallback(async () => {
       try {
-         // Filter orders with valid statuses for revenue calculation
-         const validOrders = orders.filter(order => isRevenueCountableStatus(order.status));
+         let prevTimeValue;
+         const prevTimeFilter = timeFilter;
+         let prevYear = year;
 
-         // Calculate statistics based on filtered orders
+         // Xác định kỳ trước
+         if (timeFilter === 'month') {
+            // Nếu là tháng 1 thì kỳ trước là tháng 12 năm trước
+            if (timeValue === 1) {
+               prevTimeValue = 12;
+               prevYear = year - 1;
+            } else {
+               prevTimeValue = timeValue - 1;
+            }
+         } else if (timeFilter === 'week') {
+            // Nếu là tuần 1 thì kỳ trước là tuần cuối năm trước
+            if (timeValue === 1) {
+               prevTimeValue = 52;
+               prevYear = year - 1;
+            } else {
+               prevTimeValue = timeValue - 1;
+            }
+         } else if (timeFilter === 'year') {
+            prevTimeValue = year - 1;
+         } else if (timeFilter === 'custom') {
+            // Đối với khoảng thời gian tùy chỉnh, tính khoảng thời gian tương tự trước đó
+            const duration = endDate.getTime() - startDate.getTime();
+            const prevEndDate = new Date(startDate.getTime() - 1);
+            const prevStartDate = new Date(prevEndDate.getTime() - duration);
+
+            // Format dates for API request
+            const formattedPrevStartDate = prevStartDate.toISOString().split('T')[0];
+            const formattedPrevEndDate = prevEndDate.toISOString().split('T')[0];
+
+            const response = await fetch(
+               `${HOST}/api/orders/statistics/date-to-date?startDate=${formattedPrevStartDate}&endDate=${formattedPrevEndDate}`
+            );
+
+            if (response.ok) {
+               const data = await response.json();
+               setPreviousPeriodData({
+                  totalRevenue: data.totalRevenue || 0,
+                  totalOrderValue: data.totalOrderValue || 0,
+                  totalShippingFee: data.totalShippingFee || 0,
+                  totalOrders: data.totalOrders || 0
+               });
+
+               calculateComparison(data);
+               return;
+            }
+         }
+
+         // Gọi API với tham số kỳ trước
+         if (prevTimeFilter && prevTimeValue) {
+            const response = await fetch(
+               `${HOST}/api/orders/statistics?timeFilter=${prevTimeFilter}&timeValue=${prevTimeValue}&year=${prevYear}`
+            );
+
+            if (response.ok) {
+               const data = await response.json();
+               setPreviousPeriodData({
+                  totalRevenue: data.totalRevenue || 0,
+                  totalOrderValue: data.totalOrderValue || 0,
+                  totalShippingFee: data.totalShippingFee || 0,
+                  totalOrders: data.totalOrders || 0
+               });
+
+               calculateComparison(data);
+            }
+         }
+      } catch (error) {
+         console.error('Error fetching previous period data:', error);
+      }
+   }, [timeFilter, timeValue, year, startDate, endDate]);
+
+   // Hàm tính toán phần trăm thay đổi
+   const calculateComparison = (previousData: {
+      totalRevenue?: number;
+      totalOrderValue?: number;
+      totalShippingFee?: number;
+      totalOrders?: number;
+   }) => {
+      const calculatePercentageChange = (current: number, previous: number) => {
+         if (previous === 0) return current > 0 ? 100 : 0;
+         return ((current - previous) / previous) * 100;
+      };
+
+      setComparisonStats({
+         revenueChange: calculatePercentageChange(statsData.totalRevenue, previousData.totalRevenue || 0),
+         orderValueChange: calculatePercentageChange(statsData.totalOrderValue, previousData.totalOrderValue || 0),
+         shippingFeeChange: calculatePercentageChange(statsData.totalShippingFee, previousData.totalShippingFee || 0),
+         ordersChange: calculatePercentageChange(statsData.totalOrders, previousData.totalOrders || 0)
+      });
+   };
+
+   // Thêm hàm để cập nhật chart so sánh với kỳ trước
+   const updateComparisonChart = () => {
+      let timeLabel;
+
+      if (timeFilter === 'custom') {
+         // Format date range for display
+         const formatDateForDisplay = (date: Date) => {
+            return date.toLocaleDateString('vi-VN');
+         };
+         timeLabel = `${formatDateForDisplay(startDate)} - ${formatDateForDisplay(endDate)}`;
+      } else {
+         timeLabel = timeFilter === 'month'
+            ? `Tháng ${timeValue}/${year}`
+            : timeFilter === 'week'
+               ? `Tuần ${timeValue}/${year}`
+               : `Năm ${timeValue}`;
+      }
+
+      // Xác định nhãn kỳ trước
+      let previousLabel;
+      if (timeFilter === 'month') {
+         const prevMonth = timeValue === 1 ? 12 : timeValue - 1;
+         const prevYear = timeValue === 1 ? year - 1 : year;
+         previousLabel = `Tháng ${prevMonth}/${prevYear}`;
+      } else if (timeFilter === 'week') {
+         const prevWeek = timeValue === 1 ? 52 : timeValue - 1;
+         const prevYear = timeValue === 1 ? year - 1 : year;
+         previousLabel = `Tuần ${prevWeek}/${prevYear}`;
+      } else if (timeFilter === 'year') {
+         previousLabel = `Năm ${year - 1}`;
+      } else {
+         previousLabel = 'Kỳ trước';
+      }
+
+      setChartData({
+         labels: ['Doanh thu', 'Giá trị đơn hàng', 'Phí vận chuyển'],
+         datasets: [
+            {
+               label: timeLabel,
+               data: [statsData.totalRevenue, statsData.totalOrderValue, statsData.totalShippingFee],
+               backgroundColor: 'rgba(59, 130, 246, 0.5)',
+               borderColor: 'rgb(59, 130, 246)',
+               borderWidth: 1,
+            },
+            {
+               label: previousLabel,
+               data: [previousPeriodData.totalRevenue, previousPeriodData.totalOrderValue, previousPeriodData.totalShippingFee],
+               backgroundColor: 'rgba(156, 163, 175, 0.5)',
+               borderColor: 'rgb(156, 163, 175)',
+               borderWidth: 1,
+            }
+         ]
+      });
+
+      // Cập nhật options cho biểu đồ so sánh
+      setChartOptions({
+         responsive: true,
+         maintainAspectRatio: false,
+         plugins: {
+            legend: {
+               position: 'top' as const,
+               labels: {
+                  boxWidth: 10,
+                  usePointStyle: true,
+                  pointStyle: 'circle'
+               }
+            },
+            title: {
+               display: true,
+               text: `So sánh tài chính giữa ${timeLabel} và ${previousLabel}`,
+               font: {
+                  size: 16
+               }
+            },
+         },
+         scales: {
+            y: {
+               beginAtZero: true,
+               ticks: {
+                  callback: function (value: number) {
+                     return value.toLocaleString() + ' VND';
+                  }
+               }
+            }
+         },
+      });
+   };
+   // Update the fetchDateRangeStatistics function
+   const fetchDateRangeStatistics = async () => {
+      try {
+         setLoading(true);
+
+         // Format dates for API request
+         const formattedStartDate = startDate.toISOString().split('T')[0];
+         const formattedEndDate = endDate.toISOString().split('T')[0];
+
+         // Use the correct timeFilter parameter "date_to_date" instead of "custom"
+         const response = await fetch(
+            `${HOST}/api/orders/statistics/date-to-date?startDate=${formattedStartDate}&endDate=${formattedEndDate}`
+         );
+
+         if (!response.ok) {
+            throw new Error('Failed to fetch custom date range statistics');
+         }
+
+         const data = await response.json();
+
+         // Update stats with the fetched data
          const statsData = {
-            totalRevenue: validOrders.reduce((sum, order) => sum + parseInt(order.total_price), 0),
-            totalOrderValue: validOrders.reduce((sum, order) => sum + parseInt(order.total_price), 0),
-            totalShippingFee: validOrders.reduce((sum, order) => sum + parseInt(order.ship_price), 0),
-            totalOrders: validOrders.length
+            totalRevenue: data.totalRevenue || 0,
+            totalOrderValue: data.totalOrderValue || 0,
+            totalShippingFee: data.totalShippingFee || 0,
+            totalOrders: data.totalOrders || 0
          };
 
          setStatsData(statsData);
 
-         // Update chart data
-         updateChartData(statsData);
+         // Update the chart
+         updateCurrentPeriodChart(statsData);
       } catch (error) {
-         console.error('Error processing statistics data:', error);
+         console.error('Error fetching custom date range statistics:', error);
       } finally {
          setLoading(false);
       }
    };
 
-   const fetchOrdersData = async () => {
-      setOrdersLoading(true);
-      try {
-         const response = await fetch(`${HOST}/api/orders/all`);
-         if (!response.ok) {
-            throw new Error('Failed to fetch orders data');
-         }
-         const data = await response.json();
-         setOrders(data);
-      } catch (error) {
-         console.error('Error fetching orders data:', error);
-      } finally {
-         setOrdersLoading(false);
+   // Thêm state để theo dõi lần fetch cuối cùng và cache dữ liệu
+   const [, setLastFetchTime] = useState(0);
+   const [cachedHistoricalData, setCachedHistoricalData] = useState<Record<string, Array<{
+      timeValue: number;
+      totalRevenue: number;
+      totalOrderValue: number;
+      totalShippingFee: number;
+      totalOrders: number;
+   }>>>({});
+
+   // Thêm state để kiểm soát fetch new customers
+   const [newCustomersFetched, setNewCustomersFetched] = useState(false);
+
+   // Thêm effect này để fetch categories và tính toán thống kê
+   useEffect(() => {
+      // Reset needsRefresh when key params change
+      return () => {
+         needsRefresh.current = true;
+      };
+   }, [chartView, timeFilter, timeValue, year]);
+
+
+
+   // Sửa hàm fetchOrdersData để tránh fetch trùng lặp
+   const fetchOrdersData = async (signal: AbortSignal) => {
+      // Sử dụng signal để cancel fetch khi cần thiết
+      const response = await fetch(`${HOST}/api/orders/all`, { signal });
+      if (!response.ok) {
+         throw new Error('Failed to fetch orders data');
       }
+      const data = await response.json();
+      setOrders(data);
+      setLastFetchTime(Date.now());
    };
 
    const fetchUserData = useCallback(async (orders: Order[]) => {
-      const token = localStorage.getItem('token');
-      if (!token) return;
+      try {
+         setOrdersLoading(true); // Bắt đầu tải
 
-      let hasUpdates = false;
-      const updatedOrders = [...orders];
+         const token = localStorage.getItem('token');
+         if (!token) return;
 
-      for (const order of updatedOrders) {
-         if (!order.user && order.user_id && !fetchedUserIds[order.user_id]) {
+         // Lấy danh sách user_id duy nhất từ các orders
+         const uniqueUserIds = [...new Set(
+            orders
+               .filter(order => !order.user && order.user_id && !fetchedUserIds[order.user_id])
+               .map(order => order.user_id)
+         )];
+
+         if (uniqueUserIds.length === 0) return;
+
+         let hasUpdates = false;
+         const updatedOrders = [...orders];
+         const newFetchedUserIds = { ...fetchedUserIds };
+
+         // Tạo mảng promises cho tất cả API calls
+         const userPromises = uniqueUserIds.map(async (userId) => {
             try {
-               // Mark this user ID as processed even before fetching
-               // This prevents repeated attempts to fetch the same problematic ID
-               setFetchedUserIds((prev) => ({
-                  ...prev,
-                  [order.user_id]: true,
-               }));
+               // Đánh dấu user_id này đã được xử lý
+               newFetchedUserIds[userId] = true;
 
                const userResponse = await fetch(
-                  `${HOST}/api/v1/users/${order.user_id}`,
+                  `${HOST}/api/v1/users/${userId}`,
                   {
                      headers: { Authorization: `Bearer ${token}` },
                   }
                );
 
+               console.log(`User response status for ID ${userId}:`, userResponse.status);
+               // Xử lý response và return thông tin người dùng
                if (userResponse.ok) {
-                  // Check if response has content before trying to parse JSON
                   const contentType = userResponse.headers.get('content-type');
                   if (contentType && contentType.includes('application/json')) {
                      const text = await userResponse.text();
                      if (text && text.trim()) {
                         try {
-                           const userData = JSON.parse(text);
-                           order.user = {
-                              id: userData.id,
-                              name:
-                                 userData.firstName && userData.lastName
-                                    ? `${userData.firstName} ${userData.lastName}`
-                                    : userData.firstName || userData.lastName || 'Không có tên',
-                              phone: userData.phone ? userData.phone.toString() : 'Không có SĐT',
-                              email: userData.email || 'Không có email',
-                           };
-                           hasUpdates = true;
+                           return { userId, userData: JSON.parse(text) };
                         } catch (jsonError) {
-                           console.error(`Invalid JSON for user ID ${order.user_id}:`, jsonError);
-                           // Provide a fallback user object when JSON parsing fails
-                           order.user = {
-                              id: order.user_id,
-                              name: `Khách hàng #${order.user_id}`,
-                              phone: 'Không có SĐT',
-                              email: 'Không có email',
-                           };
-                           hasUpdates = true;
+                           console.error(`Invalid JSON for user ID ${userId}:`, jsonError);
                         }
-                     } else {
-                        console.warn(`Empty response for user ID ${order.user_id}`);
-                        // Provide a fallback for empty responses
-                        order.user = {
-                           id: order.user_id,
-                           name: `Khách hàng #${order.user_id}`,
-                           phone: 'Không có SĐT',
-                           email: 'Không có email',
-                        };
-                        hasUpdates = true;
                      }
-                  } else {
-                     console.warn(`Non-JSON response for user ID ${order.user_id}`);
-                     // Provide a fallback for non-JSON responses
+                  }
+               }
+
+               // Return null nếu có lỗi
+               return { userId, userData: null };
+            } catch (error) {
+               console.error(`Failed to fetch user info for user ID ${userId}:`, error);
+               return { userId, userData: null };
+            }
+         });
+
+         // Đợi tất cả promises hoàn thành
+         const results = await Promise.all(userPromises);
+
+         // Cập nhật thông tin người dùng vào orders
+         results.forEach(({ userId, userData }) => {
+            // Bỏ qua nếu không có userData
+            if (!userData) {
+               // Cung cấp dữ liệu fallback
+               updatedOrders.forEach(order => {
+                  if (order.user_id === userId) {
                      order.user = {
-                        id: order.user_id,
-                        name: `Khách hàng #${order.user_id}`,
+                        id: userId,
+                        name: `Khách hàng #${userId}`,
                         phone: 'Không có SĐT',
                         email: 'Không có email',
                      };
                      hasUpdates = true;
                   }
-               } else {
-                  console.warn(`Failed response (${userResponse.status}) for user ID ${order.user_id}`);
-                  // Provide a fallback for failed responses
+               });
+               return;
+            }
+
+            // Cập nhật thông tin user cho tất cả orders phù hợp
+            updatedOrders.forEach(order => {
+               if (order.user_id === userId) {
                   order.user = {
-                     id: order.user_id,
-                     name: `Khách hàng #${order.user_id}`,
-                     phone: 'Không có SĐT',
-                     email: 'Không có email',
+                     id: userData.id,
+                     name: userData.firstName && userData.lastName
+                        ? `${userData.firstName} ${userData.lastName}`
+                        : userData.firstName || userData.lastName || 'Không có tên',
+                     phone: userData.phone ? userData.phone.toString() : 'Không có SĐT',
+                     email: userData.email || 'Không có email',
                   };
                   hasUpdates = true;
                }
-            } catch (error) {
-               console.error(`Failed to fetch user info for user ID ${order.user_id}:`, error);
-               // Provide a fallback for network errors
-               order.user = {
-                  id: order.user_id,
-                  name: `Khách hàng #${order.user_id}`,
-                  phone: 'Không có SĐT',
-                  email: 'Không có email',
-               };
-               hasUpdates = true;
-            }
-         }
-      }
-
-      if (hasUpdates) {
-         setOrders(updatedOrders);
-
-         // Filter orders by valid statuses before mapping to completedOrders
-         const filtered = updatedOrders.filter(order => isRevenueCountableStatus(order.status));
-
-         const mappedOrders = filtered.map((order) => {
-            // Format date for display
-            const date = new Date(order.createdAt);
-            const formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
-
-            return {
-               id: order.id,
-               orderId: order.order_code,
-               customer: order.user?.name || `Khách hàng #${order.user_id}`,
-               address: order.address,
-               quantity: order.total_quantity,
-               shippingFee: parseInt(order.ship_price),
-               total: parseInt(order.total_price),
-               status: order.status,
-               date: formattedDate,
-            };
+            });
          });
 
-         setCompletedOrders(mappedOrders);
+         if (hasUpdates) {
+            setOrders(updatedOrders);
+            setFetchedUserIds(newFetchedUserIds);
+
+            // Filter orders by valid statuses before mapping to completedOrders
+            const filtered = updatedOrders.filter(order => isRevenueCountableStatus(order.status));
+
+            const mappedOrders = filtered.map((order) => {
+               // Format date for display
+               const date = new Date(order.createdAt);
+               const formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+
+               return {
+                  id: order.id,
+                  orderId: order.order_code,
+                  customer: order.user?.name || `Khách hàng #${order.user_id}`,
+                  address: order.address,
+                  quantity: order.total_quantity,
+                  shippingFee: parseInt(order.ship_price),
+                  total: parseInt(order.total_price),
+                  status: order.status,
+                  date: formattedDate,
+               };
+            });
+
+            setCompletedOrders(mappedOrders);
+         }
+      } catch (error) {
+         console.error("Error in fetchUserData:", error);
+         setOrdersLoading(false); // Đảm bảo kết thúc trạng thái loading khi có lỗi
+      } finally {
+         setOrdersLoading(false); // Kết thúc tải
       }
    }, [fetchedUserIds]);
 
-   useEffect(() => {
-      if (orders.length > 0) {
-         fetchUserData(orders);
-      }
-   }, [orders, fetchUserData]);
+   // Thêm một biến ref để theo dõi xem đã gọi chưa
+   const hasProcessedOrders = useRef(false);
 
-   // Add this useEffect to recalculate statistics when orders change
    useEffect(() => {
-      if (orders.length > 0) {
-         fetchStatisticsData();
+      if (orders.length > 0 && !hasProcessedOrders.current) {
+         hasProcessedOrders.current = true;
+         fetchStatisticsData(null);
       }
    }, [orders]);
 
    const handleTimeFilterChange = (event: { target: { value: SetStateAction<string>; }; }) => {
       const newTimeFilter = event.target.value as string;
       setTimeFilter(newTimeFilter);
+
+      // Show date picker if custom range is selected
+      if (newTimeFilter === 'custom') {
+         setShowDateRangePicker(true);
+         return;
+      } else {
+         setShowDateRangePicker(false);
+      }
 
       // Set time value based on the filter and chart view
       const now = new Date();
@@ -375,7 +803,6 @@ export default function FinancePage() {
          // Just update the data with the new filter type
       }
 
-      // The useEffect will handle data fetching due to timeFilter change
    };
 
    const stats = [
@@ -383,34 +810,39 @@ export default function FinancePage() {
          id: 1,
          title: 'Doanh thu',
          value: `${statsData.totalRevenue?.toLocaleString()} VND`,
-         trend: `+${statsData.totalRevenue > 0 ? '37.8%' : '0%'}`,
+         trend: `${comparisonStats.revenueChange >= 0 ? '+' : ''}${comparisonStats.revenueChange.toFixed(1)}%`,
          bg: 'bg-gradient-to-br from-blue-50 to-blue-100',
          icon: <DollarSign className='text-blue-500' size={28} />,
+         trendColor: comparisonStats.revenueChange >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
       },
       {
          id: 2,
          title: 'Tổng giá trị đơn hàng',
          value: `${statsData.totalOrderValue?.toLocaleString()} VND`,
-         trend: `+${statsData.totalOrderValue > 0 ? '37.8%' : '0%'}`,
+         trend: `${comparisonStats.orderValueChange >= 0 ? '+' : ''}${comparisonStats.orderValueChange.toFixed(1)}%`,
          bg: 'bg-gradient-to-br from-purple-50 to-purple-100',
          icon: <ShoppingCart className='text-purple-500' size={28} />,
+         trendColor: comparisonStats.orderValueChange >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
       },
       {
          id: 3,
          title: 'Tổng phí vận chuyển',
          value: `${statsData.totalShippingFee?.toLocaleString()} VND`,
-         trend: 'Phí vận chuyển',
+         trend: `${comparisonStats.shippingFeeChange >= 0 ? '+' : ''}${comparisonStats.shippingFeeChange.toFixed(1)}%`,
          bg: 'bg-gradient-to-br from-green-50 to-green-100',
-         icon: <Truck className='text-green-500' size={28} />
+         icon: <Truck className='text-green-500' size={28} />,
+         trendColor: comparisonStats.shippingFeeChange >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
       },
       {
          id: 4,
          title: 'Đơn hàng',
          value: `${statsData.totalOrders || 0} Đơn hàng`,
-         trend: `+${statsData.totalOrders || 0} đơn hàng`,
+         trend: `${comparisonStats.ordersChange >= 0 ? '+' : ''}${comparisonStats.ordersChange.toFixed(1)}%`,
          bg: 'bg-gradient-to-br from-yellow-50 to-yellow-100',
          icon: <Package className='text-yellow-500' size={28} />,
+         trendColor: comparisonStats.ordersChange >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
       },
+      // Giữ nguyên sản phẩm bán chạy nhất
       {
          id: 5,
          title: 'Sản phẩm bán chạy nhất',
@@ -418,6 +850,7 @@ export default function FinancePage() {
          trend: 'Top 5 sản phẩm',
          bg: 'bg-gradient-to-br from-indigo-50 to-indigo-100',
          icon: <Star className='text-indigo-500' size={28} />,
+         trendColor: 'bg-blue-100 text-blue-700'
       },
    ];
 
@@ -430,10 +863,32 @@ export default function FinancePage() {
       );
    }, [completedOrders, searchTerm]);
 
+   const indexOfLastOrder = currentPage * ordersPerPage;
+   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
+   const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
+
+   // Tính tổng số trang
+   const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+   // Hàm thay đổi trang
+   const paginate = (pageNumber: number) => {
+      // Đảm bảo số trang hợp lệ
+      if (pageNumber < 1) pageNumber = 1;
+      if (pageNumber > totalPages) pageNumber = totalPages;
+
+      setCurrentPage(pageNumber);
+
+      // Cuộn lên đầu bảng khi chuyển trang
+      const tableElement = document.getElementById('orders-table');
+      if (tableElement) {
+         tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+   };
+
    // Hàm xuất danh sách đơn hàng thành công dưới dạng Excel
+   // Sửa lại hàm exportOrdersToExcel để xuất tất cả đơn hàng đã lọc
    const exportOrdersToExcel = () => {
       const worksheet = XLSX.utils.json_to_sheet(
-         completedOrders.map((order, index) => ({
+         filteredOrders.map((order, index) => ({
             STT: index + 1,
             'Mã đơn hàng': order.orderId,
             'Khách hàng': order.customer,
@@ -580,7 +1035,7 @@ export default function FinancePage() {
             "Tổng giá trị đơn hàng": item.totalOrderValue.toLocaleString() + " VND",
             "Tổng phí vận chuyển": item.totalShippingFee.toLocaleString() + " VND",
             "Số đơn hàng": item.totalOrders,
-            "Giá trị TB/đơn": item.totalOrders > 0 ?
+            "Giá trị TB/đơn": totalOrders > 0 ?
                Math.round(item.totalOrderValue / item.totalOrders).toLocaleString() + " VND" :
                "0 VND"
          }));
@@ -682,10 +1137,75 @@ export default function FinancePage() {
 
       // Xuất file với tên có thương hiệu
       XLSX.writeFile(workbook, `CandleBliss_BaoCaoTaiChinh_${dateStr}.xlsx`);
+
+      // Thêm thông tin danh mục vào hàm exportFinancialOverview
+      // Thêm SHEET 5: THỐNG KÊ THEO DANH MỤC
+      if (categoryStats.length > 0) {
+         // Tạo header cho sheet danh mục
+         const categoryHeader = [
+            ["BÁO CÁO THỐNG KÊ THEO DANH MỤC"], [""],
+            ["Ngày xuất báo cáo:", currentDate],
+            ["Số danh mục:", categoryStats.length.toString()],
+            [""],
+         ];
+
+         // Tạo dữ liệu danh mục
+         const categoryDetails = categoryStats.map((category, index) => ({
+            "STT": index + 1,
+            "Tên danh mục": category.name,
+            "Số lượng sản phẩm": category.count,
+            "Doanh thu": category.totalSales.toLocaleString() + " VND",
+            "Tỉ lệ": Math.round((category.count / categoryStats.reduce((sum, cat) => sum + cat.count, 0)) * 100) + "%"
+         }));
+
+         // Tạo worksheet từ header
+         const categorySheet = XLSX.utils.aoa_to_sheet(categoryHeader);
+
+         // Thêm data chi tiết vào sheet
+         XLSX.utils.sheet_add_json(categorySheet, categoryDetails, {
+            origin: "A" + (categoryHeader.length + 1),
+            skipHeader: false
+         });
+
+         // Thiết lập merge cells cho tiêu đề
+         const categoryMerges = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }];
+         categorySheet['!merges'] = categoryMerges;
+
+         // Thiết lập độ rộng cột
+         categorySheet['!cols'] = [
+            { width: 5 },   // STT
+            { width: 20 },  // Tên danh mục
+            { width: 15 },  // Số lượng sản phẩm
+            { width: 20 },  // Doanh thu
+            { width: 10 }   // Tỉ lệ
+         ];
+
+         // Thêm sheet vào workbook
+         XLSX.utils.book_append_sheet(workbook, categorySheet, 'Thống kê danh mục');
+      }
    };
+
+
 
    // Hàm thiết lập tùy chọn cho biểu đồ
    const setupChartOptions = () => {
+      let chartTitle = '';
+
+      if (chartView === 'current') {
+         if (timeFilter === 'custom') {
+            chartTitle = 'Thống kê tài chính theo khoảng thời gian tùy chỉnh';
+         } else {
+            chartTitle = `Thống kê tài chính ${timeFilter === 'month' ? `tháng ${timeValue}/${year}` :
+               timeFilter === 'week' ? `tuần ${timeValue}/${year}` :
+                  `năm ${timeValue}`
+               }`;
+         }
+      } else {
+         chartTitle = `Thống kê tài chính ${timeFilter === 'month' ? 'theo tháng' :
+            timeFilter === 'week' ? 'theo tuần' :
+               'theo năm'
+            }`;
+      }
       setChartOptions({
          responsive: true,
          maintainAspectRatio: false,
@@ -700,7 +1220,7 @@ export default function FinancePage() {
             },
             title: {
                display: true,
-               text: `Thống kê tài chính ${timeFilter === 'month' ? 'theo tháng' : timeFilter === 'week' ? 'theo tuần' : 'theo năm'}`,
+               text: chartTitle,
                font: {
                   size: 16
                }
@@ -719,12 +1239,26 @@ export default function FinancePage() {
       });
    };
 
-   const updateChartData = (data: FinanceChartData) => {
-      const timeLabel = timeFilter === 'month'
-         ? `Tháng ${timeValue}/${year}`
-         : timeFilter === 'week'
-            ? `Tuần ${timeValue}/${year}`
-            : `Năm ${year}`;
+
+   // For updateCurrentPeriodChart, memoize it with useMemo
+   const updateCurrentPeriodChart = useCallback((data = statsData) => {
+      if (!data) return;
+
+      let timeLabel;
+
+      if (timeFilter === 'custom') {
+         // Format date range for display
+         const formatDateForDisplay = (date: Date) => {
+            return date.toLocaleDateString('vi-VN');
+         };
+         timeLabel = `${formatDateForDisplay(startDate)} - ${formatDateForDisplay(endDate)}`;
+      } else {
+         timeLabel = timeFilter === 'month'
+            ? `Tháng ${timeValue}/${year}`
+            : timeFilter === 'week'
+               ? `Tuần ${timeValue}/${year}`
+               : `Năm ${timeValue}`;
+      }
 
       setChartData({
          labels: [timeLabel],
@@ -752,150 +1286,69 @@ export default function FinancePage() {
             }
          ]
       });
-   };
+   }, [statsData, timeFilter, timeValue, year, startDate, endDate]);
 
-   // Nếu không có API lịch sử, chúng ta có thể tạo dữ liệu mẫu:
-   const generateSampleHistoricalData = () => {
-      const sampleData = [];
-      const currentYear = new Date().getFullYear();
+   // Sửa hàm fetchStatisticsData để tránh fetch không cần thiết
+   const fetchStatisticsData = useCallback(async (signal?: AbortSignal | null) => {
+      try {
+         console.log("Fetching statistics data...");
 
-      if (timeFilter === 'month') {
-         // Generate data for all 12 months
-         for (let month = 1; month <= 12; month++) {
-            // Create a base revenue that increases gradually with some randomization
-            const baseRevenue = 800000 + (month * 100000) + (Math.random() * 300000);
-            const baseOrderValue = baseRevenue * 0.92; // 92% of revenue is order value
-            const baseShippingFee = baseRevenue * 0.08; // 8% is shipping fee
-            const orders = Math.floor(5 + (month * 0.5) + (Math.random() * 3));
+         // Không nên kiểm tra loading state ở đây nữa
+         // if (loading) return;
 
-            sampleData.push({
-               timeValue: month,
-               totalRevenue: Math.round(baseRevenue),
-               totalOrderValue: Math.round(baseOrderValue),
-               totalShippingFee: Math.round(baseShippingFee),
-               totalOrders: orders
-            });
+         // Đã gọi setLoading(true) ở đây trước
+         setLoading(true);
+
+         // Use different endpoint for custom date ranges
+         let response;
+         const fetchOptions = signal ? { signal } : undefined;
+
+         if (timeFilter === 'custom') {
+            const formattedStartDate = startDate.toISOString().split('T')[0];
+            const formattedEndDate = endDate.toISOString().split('T')[0];
+            response = await fetch(
+               `${HOST}/api/orders/statistics/date-to-date?startDate=${formattedStartDate}&endDate=${formattedEndDate}`,
+               fetchOptions
+            );
+         } else {
+            // Use the regular endpoint for standard time filters
+            response = await fetch(
+               `${HOST}/api/orders/statistics?timeFilter=${timeFilter}&timeValue=${timeValue}&year=${year}`,
+               fetchOptions
+            );
          }
-      } else if (timeFilter === 'week') {
-         // Generate data for all 52 weeks
-         for (let week = 1; week <= 52; week++) {
-            // Create a pattern where sales peak in certain periods
-            let seasonMultiplier = 1;
-            // Sales peak during holidays (weeks 48-52, 13-16, 26-30)
-            if ((week >= 48 && week <= 52) || (week >= 13 && week <= 16) || (week >= 26 && week <= 30)) {
-               seasonMultiplier = 1.5;
-            }
 
-            const baseRevenue = (200000 + (Math.random() * 150000)) * seasonMultiplier;
-            const baseOrderValue = baseRevenue * 0.93;
-            const baseShippingFee = baseRevenue * 0.07;
-            const orders = Math.floor(2 + (Math.random() * 3) * seasonMultiplier);
-
-            sampleData.push({
-               timeValue: week,
-               totalRevenue: Math.round(baseRevenue),
-               totalOrderValue: Math.round(baseOrderValue),
-               totalShippingFee: Math.round(baseShippingFee),
-               totalOrders: orders
-            });
+         if (!response.ok) {
+            throw new Error('Failed to fetch statistics data');
          }
-      } else {
-         // Generate data for 5 years (current year - 2 to current year + 2)
-         for (let yearOffset = -2; yearOffset <= 2; yearOffset++) {
-            const year = currentYear + yearOffset;
-            // Growth trend over years
-            const yearMultiplier = 0.8 + (yearOffset + 2) * 0.15;
 
-            const baseRevenue = 10000000 * yearMultiplier;
-            const baseOrderValue = baseRevenue * 0.94;
-            const baseShippingFee = baseRevenue * 0.06;
-            const orders = Math.floor(100 * yearMultiplier);
+         const data = await response.json();
+         console.log("Statistics data received:", data);
 
-            sampleData.push({
-               timeValue: year,
-               totalRevenue: Math.round(baseRevenue),
-               totalOrderValue: Math.round(baseOrderValue),
-               totalShippingFee: Math.round(baseShippingFee),
-               totalOrders: orders
-            });
-         }
+         // Cập nhật dữ liệu thống kê
+         const statsData = {
+            totalRevenue: data.totalRevenue || 0,
+            totalOrderValue: data.totalOrderValue || 0,
+            totalShippingFee: data.totalShippingFee || 0,
+            totalOrders: data.totalOrders || 0
+         };
+
+         setStatsData(statsData);
+
+         // Đảm bảo animation được kích hoạt sau khi có dữ liệu
+         setAnimateStats(false);
+         setTimeout(() => setAnimateStats(true), 100);
+
+         // Cập nhật biểu đồ
+         updateCurrentPeriodChart(statsData);
+
+         return data;  // Return data for chaining
+      } catch (error) {
+         console.error('Error fetching statistics data:', error);
+      } finally {
+         setLoading(false);
       }
-
-      setHistoricalData(sampleData);
-
-      // Update chart with this data
-      const labels = sampleData.map(item => {
-         if (timeFilter === 'month') return `T${item.timeValue}`;
-         if (timeFilter === 'week') return `Tuần ${item.timeValue}`;
-         return `${item.timeValue}`;
-      });
-
-      setChartData({
-         labels,
-         datasets: [
-            {
-               label: 'Tổng doanh thu',
-               data: sampleData.map(item => item.totalRevenue),
-               backgroundColor: 'rgba(59, 130, 246, 0.5)',
-               borderColor: 'rgb(59, 130, 246)',
-               borderWidth: 1,
-            },
-            {
-               label: 'Tổng giá trị đơn hàng',
-               data: sampleData.map(item => item.totalOrderValue),
-               backgroundColor: 'rgba(168, 85, 247, 0.5)',
-               borderColor: 'rgb(168, 85, 247)',
-               borderWidth: 1,
-            },
-            {
-               label: 'Tổng phí vận chuyển',
-               data: sampleData.map(item => item.totalShippingFee),
-               backgroundColor: 'rgba(34, 197, 94, 0.5)',
-               borderColor: 'rgb(34, 197, 94)',
-               borderWidth: 1,
-            }
-         ]
-      });
-   };
-
-   // Add this function for updating current period chart
-   const updateCurrentPeriodChart = () => {
-      if (!statsData) return;
-
-      const timeLabel = timeFilter === 'month'
-         ? `Tháng ${timeValue}/${year}`
-         : timeFilter === 'week'
-            ? `Tuần ${timeValue}/${year}`
-            : `Năm ${year}`;
-
-      setChartData({
-         labels: [timeLabel],
-         datasets: [
-            {
-               label: 'Tổng doanh thu',
-               data: [statsData.totalRevenue],
-               backgroundColor: 'rgba(59, 130, 246, 0.5)',
-               borderColor: 'rgb(59, 130, 246)',
-               borderWidth: 1,
-            },
-            {
-               label: 'Tổng giá trị đơn hàng',
-               data: [statsData.totalOrderValue],
-               backgroundColor: 'rgba(168, 85, 247, 0.5)',
-               borderColor: 'rgb(168, 85, 247)',
-               borderWidth: 1,
-            },
-            {
-               label: 'Tổng phí vận chuyển',
-               data: [statsData.totalShippingFee],
-               backgroundColor: 'rgba(34, 197, 94, 0.5)',
-               borderColor: 'rgb(34, 197, 94)',
-               borderWidth: 1,
-            }
-         ]
-      });
-   };
-
+   }, [timeFilter, timeValue, year, startDate, endDate, updateCurrentPeriodChart]);
    // Add this function for updating historical chart
    const updateHistoricalChart = (data?: Array<{
       timeValue: number;
@@ -953,6 +1406,8 @@ export default function FinancePage() {
    };
 
    const fetchNewCustomers = async () => {
+      if (newCustomersFetched) return; // Đã fetch rồi, không fetch nữa
+
       try {
          const token = localStorage.getItem('token');
          if (!token) return;
@@ -1010,6 +1465,8 @@ export default function FinancePage() {
          }
       } catch (error) {
          console.error('Error fetching new customers:', error);
+      } finally {
+         setNewCustomersFetched(true); // Đánh dấu đã fetch
       }
    };
 
@@ -1023,10 +1480,24 @@ export default function FinancePage() {
       }
    };
 
+   // Tối ưu hàm fetchHistoricalData với cơ chế cache
    const fetchHistoricalData = async () => {
+      // Tạo key từ các tham số hiện tại
+      const cacheKey = `${timeFilter}_${year}`;
+
+      // Kiểm tra cache
+      if (cachedHistoricalData[cacheKey]) {
+         setHistoricalData(cachedHistoricalData[cacheKey]);
+         updateHistoricalChart(cachedHistoricalData[cacheKey]);
+         return;
+      }
+
       try {
          setLoading(true);
          let allData = [];
+
+         // Define currentYear for use in API calls
+         const currentYear = new Date().getFullYear();
 
          if (timeFilter === 'week') {
             // Fetch data for all 52 weeks
@@ -1063,44 +1534,73 @@ export default function FinancePage() {
                totalOrders: data.totalOrders || 0
             }));
          } else {
-            // Sửa đổi cho lọc theo năm
-            const currentYear = new Date().getFullYear();
-            const startYear = currentYear - 2;
-            const endYear = currentYear + 2;
-
+            // For year data, fetch for a range of years (current year -2 to current year +2)
             const promises = [];
-            for (let yearVal = startYear; yearVal <= endYear; yearVal++) {
-               // Bỏ tham số timeValue khi lọc theo năm
+            for (let yearOffset = -2; yearOffset <= 2; yearOffset++) {
+               const targetYear = currentYear + yearOffset;
                promises.push(
-                  fetch(`${HOST}/api/orders/statistics?timeFilter=year&year=${yearVal}`)
+                  fetch(`${HOST}/api/orders/statistics?timeFilter=year&timeValue=${targetYear}&year=${targetYear}`)
                      .then(res => res.ok ? res.json() : null)
                );
             }
             const results = await Promise.all(promises);
-            console.log("Year filter API results:", results); // Log kết quả API
-
-            allData = results.filter(Boolean).map((data, index) => ({
-               timeValue: startYear + index,
-               totalRevenue: data?.totalRevenue || 0,
-               totalOrderValue: data?.totalOrderValue || 0,
-               totalShippingFee: data?.totalShippingFee || 0,
-               totalOrders: data?.totalOrders || 0
+            allData = results.filter(Boolean).map((data, i) => ({
+               timeValue: currentYear + (i - 2), // map back to actual year
+               totalRevenue: data.totalRevenue || 0,
+               totalOrderValue: data.totalOrderValue || 0,
+               totalShippingFee: data.totalShippingFee || 0,
+               totalOrders: data.totalOrders || 0
             }));
          }
 
          if (allData.length > 0) {
             console.log("Historical data processed:", allData);
+            // Lưu vào cache
+            setCachedHistoricalData(prev => ({
+               ...prev,
+               [cacheKey]: allData
+            }));
             setHistoricalData(allData);
             updateHistoricalChart(allData);
          } else {
-            console.log("No historical data returned, falling back to sample data");
-            // Sử dụng dữ liệu mẫu khi không có dữ liệu thật
-            generateSampleHistoricalData();
+            console.log("No historical data returned");
+            // Initialize with empty data rather than sample data
+            const emptyData = timeFilter === 'month'
+               ? Array(12).fill(0).map((_, i) => ({
+                  timeValue: i + 1,
+                  totalRevenue: 0,
+                  totalOrderValue: 0,
+                  totalShippingFee: 0,
+                  totalOrders: 0
+               }))
+               : timeFilter === 'week'
+                  ? Array(52).fill(0).map((_, i) => ({
+                     timeValue: i + 1,
+                     totalRevenue: 0,
+                     totalOrderValue: 0,
+                     totalShippingFee: 0,
+                     totalOrders: 0
+                  }))
+                  : Array(5).fill(0).map((_, i) => ({
+                     timeValue: currentYear + (i - 2),
+                     totalRevenue: 0,
+                     totalOrderValue: 0,
+                     totalShippingFee: 0,
+                     totalOrders: 0
+                  }));
+
+            setCachedHistoricalData(prev => ({
+               ...prev,
+               [cacheKey]: emptyData
+            }));
+            setHistoricalData(emptyData);
+            updateHistoricalChart(emptyData);
          }
       } catch (error) {
          console.error('Error fetching historical data:', error);
-         // Fallback to sample data on error
-         generateSampleHistoricalData();
+         // Initialize with empty data on error
+         const emptyData: SetStateAction<{ timeValue: number; totalRevenue: number; totalOrderValue: number; totalShippingFee: number; totalOrders: number; }[]> = [];
+         setHistoricalData(emptyData);
       } finally {
          setLoading(false);
       }
@@ -1122,8 +1622,221 @@ export default function FinancePage() {
          } else {
             setTimeValue(now.getFullYear()); // current year
          }
+
+         // Khi chuyển sang tab hiện tại, gọi API để lấy dữ liệu cho kỳ hiện tại
+         setTimeout(() => {
+            fetchStatisticsData(null);
+         }, 0);
+      } else {
+         // Khi chuyển sang tab lịch sử, fetch dữ liệu lịch sử
+         setTimeout(() => {
+            fetchHistoricalData();
+         }, 0);
       }
    };
+
+   // Thêm state cho chế độ xem biểu đồ
+   const [chartMode, setChartMode] = useState<'standard' | 'comparison'>('standard');
+
+   // Cập nhật hàm fetchPreviousPeriodData để gọi updateComparisonChart
+   useEffect(() => {
+      if (previousPeriodData.totalRevenue !== 0 && chartMode === 'comparison') {
+         updateComparisonChart();
+      }
+   }, [previousPeriodData, chartMode]);
+
+   // Hàm lấy thông tin sản phẩm
+   const fetchProductsInfo = useCallback(async () => {
+      // Lấy danh sách product_id duy nhất từ đơn hàng
+      const uniqueProductIds = new Set<string>();
+      orders.forEach(order => {
+         if (order.item && Array.isArray(order.item)) {
+            order.item.forEach(item => {
+               if (item.product_id) uniqueProductIds.add(item.product_id);
+            });
+         }
+      });
+
+      if (uniqueProductIds.size === 0) return;
+
+      // Chỉ fetch thông tin cho những sản phẩm chưa có trong cache
+      const idsToFetch = [...uniqueProductIds].filter(id => !productsInfo[id]);
+      if (idsToFetch.length === 0) return;
+
+      try {
+         const promises = idsToFetch.map(async (productId) => {
+            try {
+               const response = await fetch(`${HOST}/api/products/${productId}`);
+               if (response.ok) {
+                  const data = await response.json();
+                  console.log(`Product ${productId} data:`, data); // Log để debug
+                  return {
+                     id: productId,
+                     data: {
+                        ...data,
+                        // Đảm bảo isDeleted được hiểu đúng - có thể API trả về kiểu khác boolean
+                        isDeleted: data.isDeleted === true || data.isDeleted === "true" || data.deletedAt !== null
+                     }
+                  };
+               } else {
+                  // Nếu không tìm thấy sản phẩm (404), coi như đã bị xóa
+                  if (response.status === 404) {
+                     return { id: productId, data: { name: `Sản phẩm #${productId}`, isDeleted: true } };
+                  }
+               }
+            } catch (error) {
+               console.error(`Error fetching product ${productId}:`, error);
+            }
+            // Fallback nếu lỗi - coi như không xóa để tránh mất dữ liệu
+            return { id: productId, data: { name: `Sản phẩm #${productId}`, isDeleted: false } };
+         });
+
+         const results = await Promise.all(promises);
+
+         const newProductsInfo = { ...productsInfo };
+         results.forEach(({ id, data }) => {
+            if (data) {
+               newProductsInfo[id] = {
+                  name: data.name || `Sản phẩm #${id}`,
+                  image: data.images && data.images.length > 0 ? data.images[0].path : undefined,
+                  isDeleted: data.isDeleted || false
+               };
+            }
+         });
+
+         setProductsInfo(newProductsInfo);
+      } catch (error) {
+         console.error('Error fetching products info:', error);
+      }
+   }, [orders, productsInfo]);
+
+   // Thêm effect để gọi fetchProductsInfo khi orders thay đổi
+   useEffect(() => {
+      if (orders.length > 0) {
+         fetchProductsInfo();
+      }
+   }, [orders, fetchProductsInfo]);
+
+   // Replace your existing refs with these clearer ones
+   const hasProcessedUserData = useRef(false);
+   const hasProcessedProductInfo = useRef(false);
+   const productAnalysisCompleted = useRef(false); // Add this ref
+
+   // Then update these effects
+   useEffect(() => {
+      if (orders.length > 0 && !hasProcessedUserData.current) {
+         hasProcessedUserData.current = true;
+         fetchUserData(orders);
+      }
+   }, [orders, fetchUserData]);
+
+   useEffect(() => {
+      if (orders.length > 0 && !hasProcessedProductInfo.current &&
+         Object.keys(productsInfo).length === 0) {
+         hasProcessedProductInfo.current = true;
+         fetchProductsInfo();
+      }
+   }, [orders, fetchProductsInfo, productsInfo]);
+
+   // Reset refs when orders change significantly
+   useEffect(() => {
+      if (orders.length > 0) {
+         hasProcessedUserData.current = false;
+         hasProcessedProductInfo.current = false;
+         productAnalysisCompleted.current = false;
+      }
+   }, [orders.length]);
+
+   // Reset the prevention flag when key inputs change
+   useEffect(() => {
+      prevPeriodFetchedRef.current = false;
+   }, [timeFilter, timeValue, year]);
+
+   // Dedicated effect for chart options
+   useEffect(() => {
+      setupChartOptions();
+   }, [chartView, timeFilter, timeValue, year]);
+
+   // Add this effect for initial data loading when component mounts
+   useEffect(() => {
+      const abortController = new AbortController();
+
+      async function fetchInitialData() {
+         try {
+            setLoading(true);
+            setOrdersLoading(true); // Thêm dòng này
+            console.log("Starting initial data load");
+
+            // First fetch orders
+            await fetchOrdersData(abortController.signal);
+
+            // Ngay sau khi có orders, gọi fetchUserData để tạo completedOrders
+            if (orders.length > 0) {
+               await fetchUserData(orders);
+            }
+
+            // After orders are loaded, fetch stats 
+            await fetchStatisticsData(null); // Đảm bảo không dùng signal ở đây để tránh lỗi
+
+            // Force fetch previous period data for comparison
+            await fetchPreviousPeriodData();
+
+            // Reset animation để tái kích hoạt
+            setAnimateStats(false);
+            setTimeout(() => setAnimateStats(true), 200);
+
+            // Then fetch other data
+            fetchNewCustomers();
+
+            // Reset our tracking refs to ensure analysis happens
+            hasProcessedUserData.current = false;
+            hasProcessedProductInfo.current = false;
+            productAnalysisCompleted.current = false;
+
+         } catch (error) {
+            if (!abortController.signal.aborted) {
+               console.error("Error loading initial data:", error);
+            }
+         } finally {
+            setLoading(false);
+            setOrdersLoading(false); // Thêm dòng này
+         }
+      }
+
+      fetchInitialData();
+
+      // Cleanup function
+      return () => {
+         abortController.abort();
+      };
+   }, []);
+
+   // Add this effect for product analysis
+   useEffect(() => {
+      if (Object.keys(productsInfo).length > 0 && orders.length > 0 &&
+         !productAnalysisCompleted.current) {
+         productAnalysisCompleted.current = true;
+         analyzeProductGroups();
+      }
+   }, [productsInfo, orders.length, analyzeProductGroups]);
+
+   // Add logging to check data flow
+   useEffect(() => {
+      console.log("Product Groups Updated:", Object.keys(productGroups).length);
+   }, [productGroups]);
+
+   // Thêm effect này để đảm bảo dữ liệu đơn hàng được tải khi chọn tab orders
+   useEffect(() => {
+      if (currentTab === 'orders' && orders.length > 0 && completedOrders.length === 0) {
+         console.log("Đang tải dữ liệu đơn hàng cho tab Orders");
+
+         // Reset flag để đảm bảo fetchUserData được gọi
+         hasProcessedUserData.current = false;
+
+         // Gọi trực tiếp fetchUserData để lấy dữ liệu
+         fetchUserData(orders);
+      }
+   }, [currentTab, orders, completedOrders.length, fetchUserData]);
 
    return (
       <div className='flex h-screen bg-gray-50'>
@@ -1160,6 +1873,7 @@ export default function FinancePage() {
                               <option value="week">Tuần</option>
                               <option value="month">Tháng</option>
                               <option value="year">Năm</option>
+                              <option value="custom">Tùy chỉnh khoảng thời gian</option>
                            </select>
                         </div>
 
@@ -1173,6 +1887,42 @@ export default function FinancePage() {
 
                      </div>
                   </div>
+
+                  {/* Add this right after your time filter dropdown in the Page Title section */}
+                  {showDateRangePicker && (
+                     <div className="bg-white shadow-md rounded-lg p-4 mt-4 flex flex-col space-y-4">
+                        <h3 className="text-sm font-medium text-gray-700">Chọn khoảng thời gian</h3>
+
+                        <div className="flex flex-col sm:flex-row gap-4">
+                           <div className="flex flex-col">
+                              <label className="text-xs text-gray-500 mb-1">Từ ngày</label>
+                              <input
+                                 type="date"
+                                 className="border rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                 value={startDate.toISOString().split('T')[0]}
+                                 onChange={(e) => setStartDate(new Date(e.target.value))}
+                              />
+                           </div>
+
+                           <div className="flex flex-col">
+                              <label className="text-xs text-gray-500 mb-1">Đến ngày</label>
+                              <input
+                                 type="date"
+                                 className="border rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                 value={endDate.toISOString().split('T')[0]}
+                                 onChange={(e) => setEndDate(new Date(e.target.value))}
+                              />
+                           </div>
+
+                           <button
+                              onClick={fetchDateRangeStatistics}
+                              className="mt-auto bg-amber-500 text-white rounded-lg px-4 py-2 text-sm hover:bg-amber-600 transition-colors"
+                           >
+                              Áp dụng
+                           </button>
+                        </div>
+                     </div>
+                  )}
 
                   {/* Tab Navigation */}
                   <div className='mb-8 border-b border-gray-200'>
@@ -1214,8 +1964,7 @@ export default function FinancePage() {
                                  {stats.map((stat, index) => (
                                     <div
                                        key={stat.id}
-                                       className={`p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 ${stat.bg
-                                          } ${animateStats ? 'animate-fade-in' : 'opacity-0'}`}
+                                       className={`p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 ${stat.bg} ${animateStats ? 'opacity-100' : 'opacity-0'} animate-fade-in relative group`}
                                        style={{ animationDelay: `${index * 100}ms` }}
                                     >
                                        <div className='flex items-center mb-3 justify-between'>
@@ -1223,16 +1972,51 @@ export default function FinancePage() {
                                              {stat.icon}
                                           </div>
                                           <span
-                                             className={`text-xs font-medium px-2 py-1 rounded-full ${stat.trend.includes('+')
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-blue-100 text-blue-700'
-                                                }`}
+                                             className={`text-xs font-medium px-2 py-1 rounded-full ${stat.trendColor || 'bg-blue-100 text-blue-700'}`}
                                           >
                                              {stat.trend}
                                           </span>
                                        </div>
                                        <h3 className='text-sm text-gray-600 mb-1'>{stat.title}</h3>
                                        <p className='text-xl font-bold text-gray-800'>{stat.value}</p>
+
+                                       {/* Tooltip so sánh với kỳ trước chỉ hiển thị khi hover và nếu id < 5 */}
+                                       {stat.id < 5 && (
+                                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 bg-white shadow-lg rounded-lg p-3 text-sm opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-10">
+                                             <div className="font-medium mb-1">So sánh với kỳ trước</div>
+                                             <div className="flex justify-between mb-1">
+                                                <span className="text-gray-500">Kỳ hiện tại:</span>
+                                                <span className="font-medium">{
+                                                   stat.id === 1 ? statsData.totalRevenue.toLocaleString() + ' VND' :
+                                                      stat.id === 2 ? statsData.totalOrderValue.toLocaleString() + ' VND' :
+                                                         stat.id === 3 ? statsData.totalShippingFee.toLocaleString() + ' VND' :
+                                                            statsData.totalOrders + ' đơn'
+                                                }</span>
+                                             </div>
+                                             <div className="flex justify-between mb-1">
+                                                <span className="text-gray-500">Kỳ trước:</span>
+                                                <span className="font-medium">{
+                                                   stat.id === 1 ? previousPeriodData.totalRevenue.toLocaleString() + ' VND' :
+                                                      stat.id === 2 ? previousPeriodData.totalOrderValue.toLocaleString() + ' VND' :
+                                                         stat.id === 3 ? previousPeriodData.totalShippingFee.toLocaleString() + ' VND' :
+                                                            previousPeriodData.totalOrders + ' đơn'
+                                                }</span>
+                                             </div>
+                                             <div className="flex justify-between">
+                                                <span className="text-gray-500">Thay đổi:</span>
+                                                <span className={`font-medium ${(stat.id === 1 && comparisonStats.revenueChange >= 0) ||
+                                                   (stat.id === 2 && comparisonStats.orderValueChange >= 0) ||
+                                                   (stat.id === 3 && comparisonStats.shippingFeeChange >= 0) ||
+                                                   (stat.id === 4 && comparisonStats.ordersChange >= 0)
+                                                   ? 'text-green-600'
+                                                   : 'text-red-600'
+                                                   }`}>
+                                                   {stat.trend}
+                                                </span>
+                                             </div>
+                                             <div className="absolute w-3 h-3 bg-white transform rotate-45 left-1/2 -translate-x-1/2 -bottom-1.5"></div>
+                                          </div>
+                                       )}
                                     </div>
                                  ))}
                               </div>
@@ -1269,6 +2053,40 @@ export default function FinancePage() {
                                     Lịch sử
                                  </button>
                               </div>
+
+                              {/* Thêm nút chuyển đổi chế độ xem vào phần Revenue Chart Section */}
+                              <div className="inline-flex rounded-md shadow-sm ml-4">
+                                 <button
+                                    onClick={() => {
+                                       setChartMode('standard');
+                                       updateCurrentPeriodChart();
+                                    }}
+                                    className={`px-4 py-2 text-xs font-medium rounded-l-lg ${chartMode === 'standard'
+                                       ? 'bg-amber-500 text-white'
+                                       : 'bg-white text-gray-700 hover:bg-gray-50'
+                                       } border border-gray-200`}
+                                 >
+                                    Tiêu chuẩn
+                                 </button>
+                                 <button
+                                    onClick={() => {
+                                       setChartMode('comparison');
+                                       if (previousPeriodData.totalRevenue !== 0) {
+                                          updateComparisonChart();
+                                       } else {
+                                          fetchPreviousPeriodData().then(() => {
+                                             updateComparisonChart();
+                                          });
+                                       }
+                                    }}
+                                    className={`px-4 py-2 text-xs font-medium rounded-r-lg ${chartMode === 'comparison'
+                                       ? 'bg-amber-500 text-white'
+                                       : 'bg-white text-gray-700 hover:bg-gray-50'
+                                       } border border-gray-200 border-l-0`}
+                                 >
+                                    So sánh với kỳ trước
+                                 </button>
+                              </div>
                            </div>
 
                            <div className='w-full' style={{ height: '400px' }}>
@@ -1282,66 +2100,229 @@ export default function FinancePage() {
                            </div>
                            <div className="mt-4 text-center text-sm text-gray-500">
                               {chartView === 'current' ? (
-                                 <span>Đang hiển thị dữ liệu cho {timeFilter === 'month'
-                                    ? `Tháng ${timeValue}/${year}`
-                                    : timeFilter === 'week'
-                                       ? `Tuần ${timeValue}/${year}`
-                                       : `Năm ${timeValue}`}
+                                 <span>
+                                    Đang hiển thị dữ liệu cho {timeFilter === 'custom'
+                                       ? `khoảng thời gian từ ${startDate.toLocaleDateString('vi-VN')} đến ${endDate.toLocaleDateString('vi-VN')}`
+                                       : timeFilter === 'month'
+                                          ? `Tháng ${timeValue}/${year}`
+                                          : timeFilter === 'week'
+                                             ? `Tuần ${timeValue}/${year}`
+                                             : `Năm ${timeValue}`}
                                  </span>
                               ) : (
-                                 <span>Đang hiển thị dữ liệu lịch sử cho tất cả {timeFilter === 'month'
-                                    ? 'các tháng'
-                                    : timeFilter === 'week'
-                                       ? 'các tuần'
-                                       : 'các năm'}
+                                 <span>
+                                    Đang hiển thị dữ liệu lịch sử cho tất cả {timeFilter === 'month'
+                                       ? 'các tháng'
+                                       : timeFilter === 'week'
+                                          ? 'các tuần'
+                                          : 'các năm'}
                                  </span>
                               )}
                            </div>
                         </section>
 
-                        {/* New Customers Section */}
+
+
+                        {/* Product Sales Chart Section */}
                         <section className='mb-8 bg-white p-6 rounded-xl shadow-sm'>
                            <div className='flex justify-between items-center mb-6'>
                               <div>
-                                 <h2 className='text-lg font-semibold'>Khách hàng mới</h2>
+                                 <h2 className='text-lg font-semibold'>Biểu đồ sản phẩm đã bán ra</h2>
                                  <p className='text-sm text-gray-600 mt-1'>
-                                    Khách hàng đăng ký trong 7 ngày qua
+                                    Top sản phẩm bán chạy nhất theo số lượng và doanh thu
                                  </p>
                               </div>
-                              <Link
-                                 href='/seller/customers'
-                                 className='text-amber-500 hover:text-amber-600 text-sm font-medium flex items-center'
-                              >
-                                 Xem tất cả <ArrowRight className='ml-1' size={16} />
-                              </Link>
                            </div>
 
-                           <div className='grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6'>
-                              {loading ? (
-                                 <div className="col-span-full flex justify-center py-8">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
-                                 </div>
-                              ) : newCustomers.length > 0 ? (
-                                 newCustomers.map((customer) => (
-                                    <div
-                                       key={customer.id}
-                                       className='flex items-center p-3 rounded-lg hover:bg-gray-50 transition-all'
-                                    >
-                                       <div className='w-12 h-12 rounded-full overflow-hidden border border-gray-200 bg-amber-50 flex items-center justify-center text-amber-700 font-medium'>
-                                          {customer.firstName?.charAt(0)}{customer.lastName?.charAt(0)}
+                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                              {/* Biểu đồ 1: Top sản phẩm theo số lượng */}
+                              <div className="bg-gray-50 p-4 rounded-lg">
+                                 <h3 className="text-base font-medium text-gray-700 mb-4">Top sản phẩm theo số lượng</h3>
+                                 <div style={{ height: '300px', position: 'relative' }}>
+                                    {Object.keys(productGroups).length > 0 ? (
+                                       <Bar
+                                          data={{
+                                             labels: Object.entries(productGroups)
+                                                .filter(([, data]) => !data.isDeleted)  // Lọc những sản phẩm chưa bị xóa
+                                                .sort(([, a], [, b]) => b.count - a.count)
+                                                .slice(0, 7)
+                                                .map(([, data]) => data.name),
+                                             datasets: [
+                                                {
+                                                   label: 'Số lượng đã bán',
+                                                   data: Object.entries(productGroups)
+                                                      .filter(([, data]) => !data.isDeleted)  // Lọc những sản phẩm chưa bị xóa
+                                                      .sort(([, a], [, b]) => b.count - a.count)
+                                                      .slice(0, 7)
+                                                      .map(([, data]) => data.count),
+                                                   backgroundColor: 'rgba(245, 158, 11, 0.7)',
+                                                   borderColor: 'rgb(245, 158, 11)',
+                                                   borderWidth: 1,
+                                                }
+                                             ]
+                                          }}
+                                          options={{
+                                             indexAxis: 'y',
+                                             responsive: true,
+                                             maintainAspectRatio: false,
+                                             plugins: {
+                                                legend: {
+                                                   display: false
+                                                },
+                                                tooltip: {
+                                                   callbacks: {
+                                                      label: function (context) {
+                                                         return `Đã bán: ${context.raw} sản phẩm`;
+                                                      }
+                                                   }
+                                                }
+                                             },
+                                             scales: {
+                                                x: {
+                                                   beginAtZero: true,
+                                                   title: {
+                                                      display: true,
+                                                      text: 'Số lượng sản phẩm đã bán'
+                                                   }
+                                                },
+                                                y: {
+                                                   ticks: {
+                                                      callback: function (value) {
+                                                         const label = this.getLabelForValue(value as number);
+                                                         // Rút gọn tên nếu quá dài
+                                                         return label.length > 20 ? label.substring(0, 17) + '...' : label;
+                                                      }
+                                                   }
+                                                }
+                                             }
+                                          }}
+                                       />
+                                    ) : (
+                                       <div className="flex justify-center items-center h-full text-gray-500">
+                                          {Object.entries(productGroups).filter(([, data]) => data.isDeleted === false).length === 0
+                                             ? "Không có sản phẩm hợp lệ để hiển thị (tất cả đã bị xóa)"
+                                             : "Không có dữ liệu sản phẩm để hiển thị"
+                                          }
                                        </div>
-                                       <div className='ml-3'>
-                                          <p className='font-medium text-gray-800'>{customer.firstName} {customer.lastName}</p>
-                                          <p className='text-xs text-gray-500'>{formatTimeAgo(customer.createdAt)}</p>
-                                          <p className='text-xs text-gray-500'>{customer.email}</p>
-                                       </div>
-                                    </div>
-                                 ))
-                              ) : (
-                                 <div className="col-span-full text-center py-8 text-gray-500">
-                                    Không có khách hàng mới trong 7 ngày qua
+                                    )}
                                  </div>
-                              )}
+                              </div>
+
+                              {/* Biểu đồ 2: Top sản phẩm theo doanh thu */}
+                              <div className="bg-gray-50 p-4 rounded-lg">
+                                 <h3 className="text-base font-medium text-gray-700 mb-4">Top sản phẩm theo doanh thu</h3>
+                                 <div style={{ height: '300px', position: 'relative' }}>
+                                    {Object.keys(productGroups).length > 0 ? (
+                                       <Bar
+                                          data={{
+                                             labels: Object.entries(productGroups)
+                                                .filter(([, data]) => !data.isDeleted)  // Lọc những sản phẩm chưa bị xóa
+                                                .sort(([, a], [, b]) => b.revenue - a.revenue)
+                                                .slice(0, 7)
+                                                .map(([, data]) => data.name),
+                                             datasets: [
+                                                {
+                                                   label: 'Doanh thu',
+                                                   data: Object.entries(productGroups)
+                                                      .filter(([, data]) => !data.isDeleted)  // Lọc những sản phẩm chưa bị xóa
+                                                      .sort(([, a], [, b]) => b.revenue - a.revenue)
+                                                      .slice(0, 7)
+                                                      .map(([, data]) => data.revenue),
+                                                   backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                                                   borderColor: 'rgb(59, 130, 246)',
+                                                   borderWidth: 1,
+                                                }
+                                             ]
+                                          }}
+                                          options={{
+                                             indexAxis: 'y',
+                                             responsive: true,
+                                             maintainAspectRatio: false,
+                                             plugins: {
+                                                legend: {
+                                                   display: false
+                                                },
+                                                tooltip: {
+                                                   callbacks: {
+                                                      label: function (context) {
+                                                         const value = Number(context.raw);
+                                                         return `Doanh thu: ${value.toLocaleString()} VND`;
+                                                      }
+                                                   }
+                                                }
+                                             },
+                                             scales: {
+                                                x: {
+                                                   beginAtZero: true,
+                                                   title: {
+                                                      display: true,
+                                                      text: 'Doanh thu (VND)'
+                                                   },
+                                                   ticks: {
+                                                      callback: function (value) {
+                                                         return Number(value).toLocaleString();
+                                                      }
+                                                   }
+                                                },
+                                                y: {
+                                                   ticks: {
+                                                      callback: function (value) {
+                                                         const label = this.getLabelForValue(value as number);
+                                                         // Rút gọn tên nếu quá dài
+                                                         return label.length > 20 ? label.substring(0, 17) + '...' : label;
+                                                      }
+                                                   }
+                                                }
+                                             }
+                                          }}
+                                       />
+                                    ) : (
+                                       <div className="flex justify-center items-center h-full text-gray-500">
+                                          Không có dữ liệu sản phẩm để hiển thị
+                                       </div>
+                                    )}
+                                 </div>
+                              </div>
+                           </div>
+
+                           {/* Bảng thông tin chi tiết sản phẩm đã bán */}
+                           <div className="mt-6">
+                              <h3 className="text-base font-medium text-gray-700 mb-4">Chi tiết sản phẩm đã bán</h3>
+                              <div className="overflow-x-auto">
+                                 <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                                    <thead>
+                                       <tr className="bg-gray-50">
+                                          <th className="py-2 px-4 text-left text-sm font-medium text-gray-600 border-b">STT</th>
+                                          <th className="py-2 px-4 text-left text-sm font-medium text-gray-600 border-b">Tên sản phẩm</th>
+                                          <th className="py-2 px-4 text-left text-sm font-medium text-gray-600 border-b">Số lượng đã bán</th>
+                                          <th className="py-2 px-4 text-left text-sm font-medium text-gray-600 border-b">Doanh thu</th>
+                                          <th className="py-2 px-4 text-left text-sm font-medium text-gray-600 border-b">Đơn giá trung bình</th>
+                                       </tr>
+                                    </thead>
+                                    {/* Bảng thông tin chi tiết sản phẩm đã bán */}
+                                    <tbody className='divide-y divide-gray-200'>
+                                       {Object.entries(productGroups)
+                                          .filter(([, data]) => !data.isDeleted)  // Lọc những sản phẩm chưa bị xóa
+                                          .sort(([, a], [, b]) => b.revenue - a.revenue)
+                                          .slice(0, 10)
+                                          .map(([productId, data], index) => (
+                                             <tr key={productId} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                <td className='py-3 px-4 text-sm text-gray-500'>
+                                                   {index + 1}
+                                                </td>
+                                                <td className='py-3 px-4 text-sm font-medium text-amber-600'>
+                                                   {data.name}
+                                                </td>
+                                                <td className='py-3 px-4 text-sm'>{data.count} sản phẩm</td>
+                                                <td className='py-3 px-4 text-sm font-medium'>{data.revenue.toLocaleString()} VND</td>
+                                                <td className='py-3 px-4 text-sm'>
+                                                   {data.count > 0 ? (data.revenue / data.count).toLocaleString() : 0} VND
+                                                </td>
+                                             </tr>
+                                          ))}
+                                    </tbody>
+                                 </table>
+                              </div>
                            </div>
                         </section>
                      </>
@@ -1426,14 +2407,14 @@ export default function FinancePage() {
                                                 </div>
                                              </td>
                                           </tr>
-                                       ) : filteredOrders.length > 0 ? (
-                                          filteredOrders.map((order, index) => (
+                                       ) : currentOrders.length > 0 ? ( // Thay đổi từ filteredOrders thành currentOrders
+                                          currentOrders.map((order, index) => (  // Thay đổi từ filteredOrders thành currentOrders
                                              <tr
                                                 key={order.id}
                                                 className='hover:bg-gray-50 transition-colors'
                                              >
                                                 <td className='py-3 px-4 text-sm text-gray-500'>
-                                                   {index + 1}
+                                                   {indexOfFirstOrder + index + 1} {/* Sửa lại số thứ tự để hiển thị chính xác */}
                                                 </td>
                                                 <td className='py-3 px-4 text-sm font-medium text-amber-600'>
                                                    {order.orderId}
@@ -1478,55 +2459,137 @@ export default function FinancePage() {
                               </div>
                               {filteredOrders.length > 0 && (
                                  <div className='py-3 px-4 bg-gray-50 text-sm text-gray-500 border-t'>
-                                    Hiển thị {filteredOrders.length} đơn hàng hoàn thành
+                                    Hiển thị {Math.min(indexOfFirstOrder + 1, filteredOrders.length)} - {Math.min(indexOfLastOrder, filteredOrders.length)} trong tổng số {filteredOrders.length} đơn hàng hoàn thành
                                  </div>
                               )}
+                              {filteredOrders.length > 0 && <Pagination />}
+
                            </div>
                         </section>
                      </>
                   )}
 
-                  {currentTab === 'customers' && (
-                     <>
-                        {/* New Customers Section (full view) */}
-                        <section className='mb-8 bg-white p-6 rounded-xl shadow-sm'>
-                           <div className='flex justify-between items-center mb-6'>
-                              <div>
-                                 <h2 className='text-lg font-semibold'>Khách hàng mới</h2>
-                                 <p className='text-sm text-gray-600 mt-1'>
-                                    {newCustomers.length} khách hàng mới trong tháng này
-                                 </p>
-                              </div>
-                              <Link
-                                 href='/seller/customers'
-                                 className='text-amber-500 hover:text-amber-600 text-sm font-medium flex items-center'
-                              >
-                                 Xem tất cả <ArrowRight className='ml-1' size={16} />
-                              </Link>
-                           </div>
+                  {/* Product Statistics Section - UPDATED */}
+                  <section className='mb-8 bg-white p-6 rounded-xl shadow-sm'>
+                     <div className='flex justify-between items-center mb-6'>
+                        <div>
+                           <h2 className='text-lg font-semibold'>Thống kê sản phẩm bán chạy</h2>
+                           <p className='text-sm text-gray-600 mt-1'>
+                              Top sản phẩm có doanh thu cao nhất
+                           </p>
+                        </div>
+                     </div>
 
-                           <div className='grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6'>
-                              {orders
-                                 .filter(order => order.user && order.user.name)
-                                 .slice(0, 8) // Giới hạn số lượng hiển thị
-                                 .map((order) => (
+                     {Object.keys(productGroups).length > 0 ? (
+                        Object.entries(productGroups)
+                           .filter(([, data]) => data && data.isDeleted === false)
+                           .length > 0 ? (
+                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                              {Object.entries(productGroups)
+                                 .filter(([, data]) => data && data.isDeleted === false) // Lọc chắc chắn với ===
+                                 .sort(([, a], [, b]) => b.revenue - a.revenue)
+                                 .slice(0, 6)
+                                 .map(([productId, data], index) => (
                                     <div
-                                       key={order.user_id}
-                                       className='flex items-center p-3 rounded-lg hover:bg-gray-50 transition-all'
+                                       key={productId}
+                                       className={`p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow ${index === 0 ? 'bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200' :
+                                          'bg-gradient-to-br from-gray-50 to-gray-100'
+                                          }`}
                                     >
-                                       <div className='w-12 h-12 rounded-full overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center'>
-                                          {order.user?.name.charAt(0).toUpperCase() || 'K'}
+                                       <div className="flex justify-between items-start mb-2">
+                                          <div className="flex items-center">
+                                             {index < 3 && (
+                                                <div className={`w-6 h-6 flex items-center justify-center rounded-full mr-2 ${index === 0 ? 'bg-amber-500 text-white' :
+                                                   index === 1 ? 'bg-gray-400 text-white' :
+                                                      'bg-amber-700 text-white'
+                                                   }`}>
+                                                   {index + 1}
+                                                </div>
+                                             )}
+                                             <h3 className="font-medium text-gray-800">{data.name}</h3>
+                                          </div>
+                                          <span className="px-2 py-1 bg-white text-amber-800 rounded-full text-xs font-medium border border-amber-200">
+                                             {data.count} đã bán
+                                          </span>
                                        </div>
-                                       <div className='ml-3'>
-                                          <p className='font-medium text-gray-800'>{order.user?.name}</p>
-                                          <p className='text-xs text-gray-500'>{order.user?.phone || 'Không có SĐT'}</p>
+                                       <div className="mt-3 flex justify-between">
+                                          <span className="text-sm text-gray-500">Doanh thu:</span>
+                                          <span className="text-sm font-medium">{data.revenue.toLocaleString()} VND</span>
+                                       </div>
+                                       <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                                          <div
+                                             className={`${index === 0 ? 'bg-amber-500' : 'bg-blue-500'} h-2 rounded-full`}
+                                             style={{
+                                                width: `${Math.min(100, data.revenue / Math.max(...Object.values(productGroups).map(g => g.revenue)) * 100)}%`
+                                             }}
+                                          ></div>
+                                       </div>
+                                       <div className="mt-3 flex justify-between">
+                                          <span className="text-sm text-gray-500">Đơn giá trung bình:</span>
+                                          <span className="text-sm font-medium">
+                                             {data.count > 0 ? (data.revenue / data.count).toLocaleString() : 0} VND
+                                          </span>
                                        </div>
                                     </div>
                                  ))}
                            </div>
-                        </section>
-                     </>
-                  )}
+                        ) : (
+                           <div className="text-center py-8 text-gray-500">
+                              Không có sản phẩm hợp lệ để hiển thị (tất cả đã bị xóa)
+                           </div>
+                        )
+                     ) : (
+                        <div className="text-center py-8 text-gray-500">
+                           Không có dữ liệu thống kê theo sản phẩm
+                        </div>
+                     )}
+                  </section>
+
+                  {/* New Customers Section */}
+                  <section className='mb-8 bg-white p-6 rounded-xl shadow-sm'>
+                     <div className='flex justify-between items-center mb-6'>
+                        <div>
+                           <h2 className='text-lg font-semibold'>Khách hàng mới</h2>
+                           <p className='text-sm text-gray-600 mt-1'>
+                              Khách hàng đăng ký trong 7 ngày qua
+                           </p>
+                        </div>
+                        <Link
+                           href='/seller/customers'
+                           className='text-amber-500 hover:text-amber-600 text-sm font-medium flex items-center'
+                        >
+                           Xem tất cả <ArrowRight className='ml-1' size={16} />
+                        </Link>
+                     </div>
+
+                     <div className='grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6'>
+                        {loading ? (
+                           <div className="col-span-full flex justify-center py-8">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+                           </div>
+                        ) : newCustomers.length > 0 ? (
+                           newCustomers.map((customer) => (
+                              <div
+                                 key={customer.id}
+                                 className='flex items-center p-3 rounded-lg hover:bg-gray-50 transition-all'
+                              >
+                                 <div className='w-12 h-12 rounded-full overflow-hidden border border-gray-200 bg-amber-50 flex items-center justify-center text-amber-700 font-medium'>
+                                    {customer.firstName?.charAt(0)}{customer.lastName?.charAt(0)}
+                                 </div>
+                                 <div className='ml-3'>
+                                    <p className='font-medium text-gray-800'>{customer.firstName} {customer.lastName}</p>
+                                    <p className='text-xs text-gray-500'>{formatTimeAgo(customer.createdAt)}</p>
+                                    <p className='text-xs text-gray-500'>{customer.email}</p>
+                                 </div>
+                              </div>
+                           ))
+                        ) : (
+                           <div className="col-span-full text-center py-8 text-gray-500">
+                              Không có khách hàng mới trong 7 ngày qua
+                           </div>
+                        )}
+                     </div>
+                  </section>
                </div>
             </main>
          </div>
